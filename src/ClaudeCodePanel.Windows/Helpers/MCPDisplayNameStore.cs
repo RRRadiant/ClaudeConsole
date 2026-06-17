@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using ClaudeCodePanel.Windows.Models;
+
+namespace ClaudeCodePanel.Windows.Helpers;
+
+/// <summary>
+/// Purely local display-name storage for MCP servers — never touches config files.
+/// Stores display names in a JSON file at %LOCALAPPDATA%/ClaudeCodePanel/mcp_display_names.json.
+/// Writes are debounced: at most one flush every 2 seconds.
+/// </summary>
+public static class MCPDisplayNameStore
+{
+    private static readonly ConcurrentDictionary<Guid, string> _displayNames = new();
+    private static readonly string _storePath;
+    private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
+    // Debounce: use a timer to coalesce rapid writes
+    private static System.Timers.Timer? _saveTimer;
+    private static readonly object _saveLock = new();
+    private const int SaveDebounceMs = 2000;
+
+    static MCPDisplayNameStore()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var dir = Path.Combine(localAppData, "ClaudeCodePanel");
+        Directory.CreateDirectory(dir);
+        _storePath = Path.Combine(dir, "mcp_display_names.json");
+        LoadFromDisk();
+    }
+
+    /// <summary>
+    /// Returns the stored display name for the given server ID, or null if none is set.
+    /// </summary>
+    public static string? DisplayName(Guid serverId)
+    {
+        return _displayNames.TryGetValue(serverId, out var name) ? name : null;
+    }
+
+    /// <summary>
+    /// Sets or removes a display name for the given server ID.
+    /// Pass null or whitespace to remove the entry.
+    /// </summary>
+    public static void SetDisplayName(string? name, Guid serverId)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            _displayNames[serverId] = name.Trim();
+        }
+        else
+        {
+            _displayNames.TryRemove(serverId, out _);
+        }
+        SaveToDisk();
+    }
+
+    /// <summary>
+    /// Returns the display name if one has been set, otherwise falls back to the server's Name.
+    /// </summary>
+    public static string EffectiveName(MCPServerConfig server)
+    {
+        return DisplayName(server.Id) ?? server.Name;
+    }
+
+    private static void LoadFromDisk()
+    {
+        try
+        {
+            if (File.Exists(_storePath))
+            {
+                var json = File.ReadAllText(_storePath);
+                var dict = JsonSerializer.Deserialize<Dictionary<Guid, string>>(json);
+                if (dict != null)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        _displayNames[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // If loading fails, start with an empty dictionary.
+            // The file will be overwritten on the next save.
+        }
+    }
+
+    private static void SaveToDisk()
+    {
+        lock (_saveLock)
+        {
+            if (_saveTimer == null)
+            {
+                _saveTimer = new System.Timers.Timer(SaveDebounceMs)
+                {
+                    AutoReset = false
+                };
+                _saveTimer.Elapsed += (_, _) =>
+                {
+                    FlushToDisk();
+                };
+            }
+
+            // Reset the timer — each call postpones the flush
+            _saveTimer.Stop();
+            _saveTimer.Start();
+        }
+    }
+
+    private static void FlushToDisk()
+    {
+        try
+        {
+            var snapshot = new Dictionary<Guid, string>(_displayNames);
+            var json = JsonSerializer.Serialize(snapshot, _jsonOptions);
+            File.WriteAllText(_storePath, json);
+        }
+        catch
+        {
+            // Best-effort persistence; silently ignore write failures.
+        }
+    }
+}

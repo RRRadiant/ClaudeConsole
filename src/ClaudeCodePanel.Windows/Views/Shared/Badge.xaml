@@ -1,0 +1,28 @@
+<UserControl x:Class="ClaudeCodePanel.Windows.Views.Shared.Badge"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         Badge — Pill-shaped status label
+         Matches .status-pill from Claude-Win
+
+         Variants:
+           "Info"    — Accent blue text on accent bg
+           "Success" — Green text (#4ea88d) on green bg
+           "Neutral" — Secondary text on secondary bg
+           "Warning" — Amber text on amber bg
+           "Danger"  — Red text on red bg
+         ═══════════════════════════════════════════════════════════ -->
+
+    <Border x:Name="BadgeBorder"
+            CornerRadius="14"
+            ClipToBounds="True"
+            Padding="12,6"
+            BorderThickness="1">
+
+        <TextBlock x:Name="BadgeTextBlock"
+                   FontSize="13"
+                   FontWeight="Medium"/>
+    </Border>
+</UserControl>

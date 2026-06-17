@@ -1,0 +1,126 @@
+<UserControl x:Class="ClaudeCodePanel.Windows.Views.Dashboard.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared">
+    <ScrollViewer>
+        <StackPanel Margin="48,36" HorizontalAlignment="Stretch">
+
+            <!-- ═══ Hero Section ═══ -->
+            <StackPanel HorizontalAlignment="Center" Margin="0,24,0,0">
+                <TextBlock Text="Claude Code"
+                           FontSize="40"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           HorizontalAlignment="Center"/>
+                <shared:StatusIndicator x:Name="ClaudeStatus"
+                                        Label="未安装"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,12,0,0"/>
+            </StackPanel>
+
+            <!-- ═══ Metric Cards Row ═══ -->
+            <Grid Margin="0,40,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Card 1: Enabled Models -->
+                <shared:GlassCard Grid.Column="0" Variant="Default">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE950;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="26"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding Summary.EnabledModelsCount}"
+                                   FontSize="42"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,12,0,0"/>
+                        <TextBlock Text="已启用模型"
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+                </shared:GlassCard>
+
+                <!-- Card 2: Installed Skills -->
+                <shared:GlassCard Grid.Column="2" Variant="Default">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE94A;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="26"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding Summary.InstalledSkillsCount}"
+                                   FontSize="42"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,12,0,0"/>
+                        <TextBlock Text="已安装 Skill"
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+                </shared:GlassCard>
+
+                <!-- Card 3: MCP Servers -->
+                <shared:GlassCard Grid.Column="4" Variant="Default">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE946;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="26"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock FontSize="42"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,10,0,0">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="{}{0}/{1}">
+                                    <Binding Path="Summary.ActiveMCPServersCount"/>
+                                    <Binding Path="Summary.TotalMCPServersCount"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                        <TextBlock Text="MCP 运行中"
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+                </shared:GlassCard>
+            </Grid>
+
+            <!-- ═══ API Status Card (Signal variant for emphasis) ═══ -->
+            <shared:GlassCard Margin="0,28,0,0" Variant="Signal">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE72E;"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="26"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Summary.ApiProvider}"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <shared:StatusIndicator Label="未配置"
+                                                Margin="0,6,0,0"
+                                                Loaded="OnApiStatusLoaded"/>
+                    </StackPanel>
+                </StackPanel>
+            </shared:GlassCard>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

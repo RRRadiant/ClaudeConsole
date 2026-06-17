@@ -1,0 +1,21 @@
+## Build artifacts
+bin/
+obj/
+publish/
+publish-self-contained/
+
+## IDE
+.vs/
+*.user
+*.suo
+*.DotSettings
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Temporary files
+*.tmp
+*.bak
+*.orig
+~$*
