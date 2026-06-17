@@ -1,36 +1,36 @@
 # ClaudeConsole
 
-Windows 桌面应用 — 一站式管理 [Claude Code](https://claude.ai/code) 配置：API 提供商、模型、MCP 服务器、技能、配置文件。
+A Windows desktop app for managing [Claude Code](https://claude.ai/code) configuration — API providers, models, MCP servers, skills, and config files.
 
-> 🖥️ 本项目是 macOS 版 [ClaudeCodePanel](https://github.com/RRRadiant/ClaudeCodePanel) 的 Windows 移植版。
+> 🖥️ Windows port of the macOS app [ClaudeCodePanel](https://github.com/RRRadiant/ClaudeCodePanel).
 
-## ✨ 功能
+## ✨ Features
 
-| 面板 | 说明 |
-|------|------|
-| **概览** | Claude Code 安装状态、API 连接、模型数、MCP 服务器、技能总览 |
-| **API 配置** | 管理 API 密钥（存储在 Windows 凭据管理器），支持 Anthropic / OpenAI / DeepSeek / 自定义，连接测试，模型检测 |
-| **配置文件** | 浏览编辑 `~/.claude/` JSON 配置文件，mtime 冲突检测 |
-| **MCP 服务器** | 增删改 MCP 服务器，连接测试，本地别名管理 |
-| **技能** | 浏览 GitHub Marketplace，安装 / 卸载技能，启用 / 禁用 |
-| **安装器** | 一键安装 / 卸载 Claude Code CLI（npm / winget） |
-| **环境检测** | 检测 Node.js、npm、Git 安装状态及版本 |
+| Panel | Description |
+|-------|-------------|
+| **Dashboard** | Claude Code status, API connection, model count, MCP servers, skills overview |
+| **API Config** | Manage API keys (stored in Windows Credential Manager), support for Anthropic / OpenAI / DeepSeek / Custom, connection testing, model detection |
+| **Config Editor** | Browse and edit `~/.claude/` JSON config files with mtime conflict detection |
+| **MCP Servers** | Add, edit, delete MCP servers with connection testing and local display-name aliases |
+| **Skills** | Browse GitHub Marketplace, install / uninstall skills, toggle enabled state |
+| **Installer** | One-click install / uninstall Claude Code CLI (npm / winget) |
+| **Env Check** | Detect Node.js, npm, and Git installation status and versions |
 
-### 🎨 界面
-- Windows 11 Mica 毛玻璃效果（Win10 降级为深色背景）
-- 暗色主题、自定义标题栏
-- 侧边栏导航 + 内容区切换
+### 🎨 UI
+- Windows 11 Mica backdrop (falls back to dark solid background on Windows 10)
+- Dark theme, custom title bar
+- Sidebar navigation with content area swapping
 
-### 🔄 自动更新
-- 启动时自动检测 GitHub Releases 新版本
-- 侧边栏底部手动「检查更新」按钮
-- 检测到新版本 → 顶部蓝色横幅，一键跳转下载
+### 🔄 Auto Update
+- Checks GitHub Releases for new versions on startup
+- Manual "Check for Updates" button in the sidebar footer
+- Update notification banner appears when a newer version is found — one click to download
 
-## 📦 下载
+## 📦 Download
 
-前往 [Releases](https://github.com/Lyxxxx718/ClaudeConsole/releases) 下载最新版 `ClaudeConsole.exe`，双击即可运行，无需安装 .NET 运行时。
+Go to [Releases](https://github.com/Lyxxxx718/ClaudeConsole/releases) and download the latest `ClaudeConsole.exe`. Double-click to run — no .NET runtime installation required.
 
-## 🔧 从源码构建
+## 🔧 Build from Source
 
 ```powershell
 git clone https://github.com/Lyxxxx718/ClaudeConsole.git
@@ -40,56 +40,56 @@ dotnet build -c Release
 dotnet run -c Release --project src/ClaudeCodePanel.Windows
 ```
 
-或在 Visual Studio 2022 中打开 `ClaudeCodePanel.Windows.sln` 按 F5 运行。
+Or open `ClaudeCodePanel.Windows.sln` in Visual Studio 2022 and press F5.
 
-## 🧱 技术栈
+## 🧱 Tech Stack
 
-| 层级 | 技术 |
-|------|------|
+| Layer | Technology |
+|-------|-----------|
 | UI | WPF (XAML) |
 | MVVM | CommunityToolkit.Mvvm |
 | DI | Microsoft.Extensions.DependencyInjection |
 | HTTP | System.Net.Http |
 | JSON | System.Text.Json |
-| 凭据存储 | Windows Credential Manager (advapi32.dll) |
-| 文件监控 | System.IO.FileSystemWatcher |
+| Credential Storage | Windows Credential Manager (advapi32.dll) |
+| File Watching | System.IO.FileSystemWatcher |
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 src/ClaudeCodePanel.Windows/
-├── App.xaml(.cs)              # 入口、DI 容器、Mica 设置
+├── App.xaml(.cs)              # Entry point, DI container, Mica setup
 ├── Models/                    # APIProvider, DashboardSummary, MCPServerConfig, SkillItem, UpdateInfo
 ├── Services/                  # ConfigFileService, CredentialService, MCPService, SyncService,
 │                              # SkillRepositoryService, InstallerService, EnvironmentService,
 │                              # FileWatcherService, UpdateService
-├── ViewModels/                # MainViewModel + 7 个面板 ViewModel
+├── ViewModels/                # MainViewModel + 7 panel ViewModels
 ├── Views/
-│   ├── MainWindow.xaml        # 主窗口（自定义标题栏 + 侧边栏 + 内容区）
-│   ├── Sidebar/               # 侧边栏导航 + 版本/更新状态
-│   ├── Dashboard/             # 概览面板
-│   ├── API/                   # API 配置面板
-│   ├── Config/                # 配置文件编辑器
-│   ├── MCP/                   # MCP 服务器管理
-│   ├── Skills/                # 技能管理
-│   ├── Installer/             # CLI 安装器
-│   ├── EnvCheck/              # 环境检测
-│   └── Shared/                # GlassCard, GlassButton, StatusIndicator 等 8 个公用控件
-├── Converters/                # XAML 值转换器
+│   ├── MainWindow.xaml        # Main window (custom title bar + sidebar + content area)
+│   ├── Sidebar/               # Sidebar navigation + version/update status
+│   ├── Dashboard/             # Dashboard panel
+│   ├── API/                   # API config panel
+│   ├── Config/                # Config file editor
+│   ├── MCP/                   # MCP server manager
+│   ├── Skills/                # Skill manager
+│   ├── Installer/             # CLI installer
+│   ├── EnvCheck/              # Environment check
+│   └── Shared/                # 8 shared controls (GlassCard, GlassButton, StatusIndicator, etc.)
+├── Converters/                # XAML value converters
 ├── Helpers/                   # MCPDisplayNameStore, Windows11Interop
 └── Resources/Themes/          # DarkTheme.xaml
 ```
 
-## 🔄 macOS 对应关系
+## 🔄 macOS Equivalents
 
 | macOS (SwiftUI) | Windows (WPF) |
 |---|---|
-| `@Observable` 宏 | `[ObservableProperty]` 源生成器 |
+| `@Observable` macro | `[ObservableProperty]` source generator |
 | macOS Keychain | Windows Credential Manager |
 | `~/.claude/` | `%USERPROFILE%/.claude/` |
 | SF Symbols | Segoe MDL2 Assets |
-| `.glassBackgroundEffect()` | Mica 背景 + 半透明画刷 |
+| `.glassBackgroundEffect()` | Mica backdrop + semi-transparent brushes |
 
-## 📄 许可
+## 📄 License
 
-与原项目 [ClaudeCodePanel](https://github.com/RRRadiant/ClaudeCodePanel) 保持一致。
+Same as the original [ClaudeCodePanel](https://github.com/RRRadiant/ClaudeCodePanel) project.
