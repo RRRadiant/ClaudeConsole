@@ -171,24 +171,81 @@
                        Fill="{StaticResource BorderDefaultBrush}"
                        Margin="16,0"/>
 
-            <!-- Status indicator -->
-            <StackPanel Orientation="Horizontal"
-                        Margin="16,10,16,12">
-                <Ellipse Width="8" Height="8"
-                         Fill="{StaticResource StatusRunningBrush}"
-                         VerticalAlignment="Center">
-                    <Ellipse.Effect>
-                        <DropShadowEffect ShadowDepth="0"
-                                          BlurRadius="6"
-                                          Opacity="0.5"
-                                          Color="#4ea88d"/>
-                    </Ellipse.Effect>
-                </Ellipse>
-                <TextBlock Text="系统运行中"
-                           FontSize="12"
-                           Foreground="{StaticResource TextTertiaryBrush}"
-                           Margin="6,0,0,0"
-                           VerticalAlignment="Center"/>
+            <!-- Version + update status -->
+            <StackPanel Margin="16,10,16,12">
+                <TextBlock FontSize="11"
+                           Foreground="{StaticResource TextTertiaryBrush}">
+                    <Run Text="{Binding CurrentVersionText, Mode=OneWay}"/>
+                </TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <Ellipse Width="7" Height="7"
+                             VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding UpdateStatusText}" Value="已是最新">
+                                        <Setter Property="Fill" Value="{StaticResource StatusRunningBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding UpdateStatusText}" Value="检查中…">
+                                        <Setter Property="Fill" Value="#999999"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding UpdateStatusText}" Value="发现新版本">
+                                        <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding UpdateStatusText}"
+                               FontSize="11"
+                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Manual check button -->
+                <Button Command="{Binding DoCheckUpdateCommand}"
+                        Background="Transparent"
+                        Foreground="{StaticResource TextTertiaryBrush}"
+                        BorderBrush="{StaticResource BorderDefaultBrush}"
+                        BorderThickness="1"
+                        Padding="10,5"
+                        Margin="0,8,0,0"
+                        Cursor="Hand"
+                        HorizontalAlignment="Left">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6"
+                                    Padding="{TemplateBinding Padding}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE72C;"
+                                               FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="检查更新"
+                                               FontSize="11"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#14FFFFFF"/>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
             </StackPanel>
         </StackPanel>
     </Grid>

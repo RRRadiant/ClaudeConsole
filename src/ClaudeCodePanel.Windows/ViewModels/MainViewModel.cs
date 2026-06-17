@@ -82,6 +82,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _updateUrl = "";
 
+    /// <summary>Current app version string (e.g. "v1.0.0").</summary>
+    [ObservableProperty]
+    private string _currentVersionText = "v1.0.0";
+
+    /// <summary>Update status shown in the sidebar: 检查中… / 已是最新 / 发现新版本.</summary>
+    [ObservableProperty]
+    private string _updateStatusText = "检查中…";
+
     // ── Sidebar items ──────────────────────────────────────────────
 
     /// <summary>
@@ -134,14 +142,30 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private async Task CheckForUpdateAsync()
     {
+        await DoCheckUpdateAsync();
+    }
+
+    /// <summary>
+    /// Manual update check — bound to the sidebar footer button.
+    /// </summary>
+    [RelayCommand]
+    private async Task DoCheckUpdateAsync()
+    {
+        UpdateStatusText = "检查中…";
+        IsUpdateAvailable = false;
+
         var update = await UpdateService.Instance.CheckForUpdateAsync();
         if (update is not { IsNewer: true })
+        {
+            UpdateStatusText = "已是最新";
             return;
+        }
 
         UpdateVersion = update.Version;
         UpdateReleaseNotes = update.ReleaseNotes;
         UpdateUrl = update.ReleaseUrl;
         IsUpdateAvailable = true;
+        UpdateStatusText = $"发现 {update.Version}";
     }
 
     /// <summary>

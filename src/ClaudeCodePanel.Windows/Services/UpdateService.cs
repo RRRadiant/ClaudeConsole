@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using ClaudeCodePanel.Windows.Models;
@@ -11,7 +10,7 @@ namespace ClaudeCodePanel.Windows.Services;
 
 /// <summary>
 /// Checks for updates via the GitHub Releases API.
-/// Compares the latest release tag against the current assembly version.
+/// Compares the latest release tag against the current version.
 /// </summary>
 public sealed class UpdateService
 {
@@ -22,13 +21,11 @@ public sealed class UpdateService
     private const string GitHubRepo = "ClaudeConsole";
     // ──────────────────────────────────────────────────────────────
 
+    /// <summary>当前版本 — 发布新版本时记得同步更新 csproj 中的 Version</summary>
+    private static readonly Version CurrentVersion = new Version(1, 0, 0);
+
     private static readonly string ReleasesApiUrl =
         $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
-
-    private static readonly Version CurrentVersion = Assembly
-        .GetExecutingAssembly()
-        .GetName()
-        .Version ?? new Version(1, 0, 0);
 
     private readonly HttpClient _httpClient;
 
@@ -38,7 +35,7 @@ public sealed class UpdateService
         _httpClient.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
         _httpClient.DefaultRequestHeaders.UserAgent.Add(
-            new ProductInfoHeaderValue("ClaudeCodePanel", CurrentVersion.ToString()));
+            new ProductInfoHeaderValue("ClaudeConsole", "1.0"));
         _httpClient.Timeout = TimeSpan.FromSeconds(10);
     }
 
@@ -70,12 +67,10 @@ public sealed class UpdateService
             var htmlUrl = root.GetProperty("html_url").GetString() ?? "";
             var body = root.GetProperty("body").GetString() ?? "";
 
-            // Parse version from tag (strip leading 'v' if present)
             var remoteVersion = ParseVersion(tagName);
             if (remoteVersion == null || remoteVersion <= CurrentVersion)
                 return null;
 
-            // Look for a portable .exe in assets
             string? downloadUrl = null;
             if (root.TryGetProperty("assets", out var assets) &&
                 assets.ValueKind == JsonValueKind.Array)
@@ -98,7 +93,6 @@ public sealed class UpdateService
         }
         catch
         {
-            // Offline / rate-limited / parse error — silently return null
             return null;
         }
     }
@@ -107,7 +101,6 @@ public sealed class UpdateService
 
     private static Version? ParseVersion(string tag)
     {
-        // Strip leading 'v' or 'V'
         var verStr = tag.StartsWith('v') || tag.StartsWith('V')
             ? tag[1..]
             : tag;

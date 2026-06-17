@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -42,36 +41,10 @@ public partial class DashboardViewModel : ObservableObject
     /// </summary>
     public async Task LoadSummaryAsync()
     {
-        // ── 1. Check Claude CLI via "claude --version" ──────────────────
-        bool claudeInstalled = false;
-        string claudeVersion = "";
-
-        try
-        {
-            var startInfo = new ProcessStartInfo("claude", "--version")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-            using var process = Process.Start(startInfo);
-            if (process != null)
-            {
-                await process.WaitForExitAsync();
-                if (process.ExitCode == 0)
-                {
-                    claudeInstalled = true;
-                    var output = await process.StandardOutput.ReadToEndAsync();
-                    claudeVersion = output?.Trim() ?? "";
-                }
-            }
-        }
-        catch
-        {
-            // Claude CLI not found — leave flags at defaults
-        }
+        // ── 1. Check Claude CLI via InstallerService (thorough Windows detection) ──
+        var status = await Task.Run(() => InstallerService.Instance.GetClaudeStatus());
+        bool claudeInstalled = status.Installed;
+        string claudeVersion = status.Version ?? "";
 
         // ── 2. Read settings.json once for models + provider ──────────
         int enabledModelsCount = 0;
