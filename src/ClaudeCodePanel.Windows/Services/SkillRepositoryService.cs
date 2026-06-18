@@ -155,13 +155,13 @@ public sealed class SkillRepositoryService
             }
 
             if (items == null)
-                throw new SkillRepoException("无法连接到 GitHub，请检查网络后重试");
+                return GetBuiltInSkillList();
 
             var dirs = items.Where(i => i.Type == "dir").ToList();
 
-            // 2. Fetch SKILL.md metadata in parallel (raw CDN, no rate limit)
+            // 2. Fetch SKILL.md metadata in parallel (raw CDN + mirrors)
             var skills = new List<SkillItem>();
-            var semaphore = new SemaphoreSlim(6); // Max 6 concurrent fetches
+            var semaphore = new SemaphoreSlim(6);
 
             var tasks = dirs.Select(async dir =>
             {
@@ -169,14 +169,10 @@ public sealed class SkillRepositoryService
                 try
                 {
                     var skill = await FetchSkillMetadataAsync(dir.Name).ConfigureAwait(false);
-                    lock (skills)
-                    {
-                        skills.Add(skill);
-                    }
+                    lock (skills) { skills.Add(skill); }
                 }
                 catch
                 {
-                    // Fallback: use directory name
                     var skill = new SkillItem
                     {
                         Id = dir.Name,
@@ -187,25 +183,51 @@ public sealed class SkillRepositoryService
                     };
                     lock (skills) { skills.Add(skill); }
                 }
-                finally
-                {
-                    semaphore.Release();
-                }
+                finally { semaphore.Release(); }
             });
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            // Sort by name
             skills.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
-
             SaveCache(skills);
             return skills;
         }
         catch (SkillRepoException) { throw; }
-        catch (Exception ex)
+        catch
         {
-            throw new SkillRepoException("Failed to fetch skill repository data", ex);
+            return GetBuiltInSkillList();
         }
+    }
+
+    /// <summary>
+    /// Built-in skill list used as fallback when GitHub is unreachable.
+    /// Update this list periodically to keep it in sync with the official repo.
+    /// </summary>
+    private List<SkillItem> GetBuiltInSkillList()
+    {
+        var ids = new[]
+        {
+            "agents-for", "caveman", "design-an-interface", "diagnose",
+            "edit-article", "explore", "git-guardrails-claude-code",
+            "grill-me", "grill-with-docs", "handoff",
+            "improve-codebase-architecture", "init", "install-capability",
+            "karpathy-guidelines", "migrate-to-shoehorn", "obsidian-vault",
+            "prototype", "qa", "request-refactor-plan", "research",
+            "review", "scaffold-exercises", "security-review",
+            "setup-matt-pocock-skills", "setup-pre-commit", "tdd",
+            "teach", "test", "to-issues", "to-prd",
+            "triage", "ubiquitous-language", "write-a-skill",
+            "writing-beats", "writing-fragments", "writing-shape", "zoom-out"
+        };
+
+        return ids.Select(id => new SkillItem
+        {
+            Id = id,
+            Name = CapitalizeWords(id.Replace("-", " ")),
+            Description = "Claude Code 官方技能",
+            Source = SkillSource.Marketplace,
+            IsInstalled = IsSkillInstalled(id)
+        }).ToList();
     }
 
     /// <summary>
