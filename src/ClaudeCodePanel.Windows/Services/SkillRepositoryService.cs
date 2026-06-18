@@ -124,24 +124,38 @@ public sealed class SkillRepositoryService
 
         try
         {
-            // 1. Fetch directory listing from GitHub API
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                "https://api.github.com/repos/anthropic/claude-code/contents/skills");
+            // 1. Fetch directory listing from GitHub API (with mirror fallback)
+            var apiUrls = new[]
+            {
+                "https://api.github.com/repos/anthropic/claude-code/contents/skills",
+                "https://ghproxy.com/https://api.github.com/repos/anthropic/claude-code/contents/skills",
+            };
 
-            request.Headers.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
-            request.Headers.UserAgent.Add(
-                new ProductInfoHeaderValue("ClaudeConsole", "1.0"));
+            List<GitHubContentItem>? items = null;
+            foreach (var apiUrl in apiUrls)
+            {
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+                    request.Headers.Accept.Add(
+                        new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+                    request.Headers.UserAgent.Add(
+                        new ProductInfoHeaderValue("ClaudeConsole", "1.0"));
 
-            using var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                throw new SkillRepoException($"Failed to fetch skill repository (HTTP {(int)response.StatusCode})");
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    using var response = await _httpClient.SendAsync(request, cts.Token).ConfigureAwait(false);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+                        items = JsonSerializer.Deserialize<List<GitHubContentItem>>(json);
+                        if (items != null) break;
+                    }
+                }
+                catch { /* try next mirror */ }
+            }
 
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var items = JsonSerializer.Deserialize<List<GitHubContentItem>>(json);
             if (items == null)
-                throw new SkillRepoException("Failed to parse skill repository data");
+                throw new SkillRepoException("无法连接到 GitHub，请检查网络后重试");
 
             var dirs = items.Where(i => i.Type == "dir").ToList();
 
@@ -195,15 +209,46 @@ public sealed class SkillRepositoryService
     }
 
     /// <summary>
-    /// Fetches SKILL.md from raw.githubusercontent.com and extracts
-    /// YAML frontmatter fields (name, description).
+    /// Fetches SKILL.md from raw.githubusercontent.com (with mirror fallback)
+    /// and extracts YAML frontmatter fields (name, description).
     /// </summary>
     private async Task<SkillItem> FetchSkillMetadataAsync(string skillId)
     {
-        var rawUrl = $"https://raw.githubusercontent.com/anthropic/claude-code/main/skills/{skillId}/SKILL.md";
+        var rawPaths = new[]
+        {
+            $"https://raw.githubusercontent.com/anthropic/claude-code/main/skills/{skillId}/SKILL.md",
+            $"https://ghproxy.com/https://raw.githubusercontent.com/anthropic/claude-code/main/skills/{skillId}/SKILL.md",
+            $"https://raw.fastgit.org/anthropic/claude-code/main/skills/{skillId}/SKILL.md",
+        };
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var content = await _httpClient.GetStringAsync(rawUrl, cts.Token).ConfigureAwait(false);
+        string? content = null;
+        foreach (var url in rawPaths)
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+                content = await _httpClient.GetStringAsync(url, cts.Token).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(content))
+                    break;
+            }
+            catch
+            {
+                // Try next mirror
+            }
+        }
+
+        if (content == null)
+        {
+            // All mirrors failed — use directory name
+            return new SkillItem
+            {
+                Id = skillId,
+                Name = CapitalizeWords(skillId.Replace("-", " ")),
+                Description = "",
+                Source = SkillSource.Marketplace,
+                IsInstalled = IsSkillInstalled(skillId)
+            };
+        }
 
         var (name, description) = ParseSkillMarkdownFrontmatter(content);
 

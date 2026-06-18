@@ -171,6 +171,9 @@ public partial class SkillsListView : UserControl
         if (skills.Count == 0 && !_vm.IsLoadingMarketplace && !_vm.IsGithubUrl)
         {
             MarketplaceEmpty.Visibility = Visibility.Visible;
+            MarketplaceEmpty.Message = string.IsNullOrEmpty(_vm.ErrorMessage)
+                ? "未找到相关 Skill"
+                : $"加载失败: {_vm.ErrorMessage}";
             return;
         }
 
