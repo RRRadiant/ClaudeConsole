@@ -84,6 +84,20 @@ public partial class SkillManagerViewModel : ObservableObject
     [ObservableProperty]
     private string _installPathOrURL = "";
 
+    /// <summary>True when the search query looks like a GitHub URL.</summary>
+    [ObservableProperty]
+    private bool _isGithubUrl;
+
+    /// <summary>GitHub URL skill item for one-click install from search.</summary>
+    [ObservableProperty]
+    private SkillItem? _githubUrlSkill;
+
+    // ── GitHub URL pattern ─────────────────────────────────────────
+
+    private static readonly System.Text.RegularExpressions.Regex GitHubUrlRegex = new(
+        @"^https?://github\.com/([^/]+)/([^/]+?)(\.git)?/?$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
     // ── Computed / filtered properties ────────────────────────────
 
     // ── Cached filtered collections ────────────────────────────────
@@ -148,7 +162,78 @@ public partial class SkillManagerViewModel : ObservableObject
 
     partial void OnSearchQueryChanged(string value)
     {
+        DetectGitHubUrl(value);
         RebuildFilters();
+    }
+
+    /// <summary>
+    /// Detects if the search query is a GitHub repository URL and
+    /// creates a virtual SkillItem for one-click install.
+    /// </summary>
+    private void DetectGitHubUrl(string query)
+    {
+        var match = GitHubUrlRegex.Match(query.Trim());
+        if (match.Success)
+        {
+            var owner = match.Groups[1].Value;
+            var repo = match.Groups[2].Value;
+            var id = repo;
+
+            IsGithubUrl = true;
+            GithubUrlSkill = new SkillItem
+            {
+                Id = id,
+                Name = $"{owner}/{repo}",
+                Description = $"从 GitHub 安装 {owner}/{repo}",
+                Source = SkillSource.GitURL,
+                IsInstalled = SkillRepositoryService.Instance.IsSkillInstalled(id)
+            };
+
+            // Also set install sheet values for the dialog
+            InstallSource = SkillSource.GitURL;
+            InstallPathOrURL = query.Trim();
+        }
+        else
+        {
+            IsGithubUrl = false;
+            GithubUrlSkill = null;
+        }
+    }
+
+    /// <summary>
+    /// Installs the detected GitHub URL skill.
+    /// </summary>
+    public async Task InstallGithubUrlSkillAsync()
+    {
+        if (GithubUrlSkill == null || string.IsNullOrWhiteSpace(SearchQuery))
+            return;
+
+        var url = SearchQuery.Trim();
+        if (!url.StartsWith("http"))
+            url = $"https://github.com/{url}";
+
+        IsInstalling = true;
+        try
+        {
+            await Task.Run(() =>
+            {
+                SkillRepositoryService.Instance.InstallSkill(
+                    id: GithubUrlSkill.Id,
+                    source: SkillSource.GitURL,
+                    pathOrURL: url.EndsWith(".git") ? url : url + ".git");
+            });
+
+            GithubUrlSkill.IsInstalled = true;
+            LoadInstalledSkills();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
     }
 
     partial void OnInstalledSkillsChanged(List<SkillItem> value)

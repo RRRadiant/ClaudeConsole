@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using ClaudeCodePanel.Windows.Models;
 
@@ -109,22 +110,21 @@ public sealed class SkillRepositoryService
     // ── Fetch marketplace ─────────────────────────────────
 
     /// <summary>
-    /// Fetches the list of marketplace skills from the GitHub API.
-    /// Results are cached in <c>%LOCALAPPDATA%/ClaudeCodePanel/skillcache.json</c>
-    /// for 3600 seconds.
+    /// Fetches the list of marketplace skills from the GitHub API,
+    /// then enriches each with name/description from SKILL.md.
+    /// Results are cached for 3600 seconds.
     /// </summary>
     public async Task<List<SkillItem>> FetchMarketplaceSkillsAsync()
     {
-        // Return cached results if fresh
         var cache = LoadCache();
         if (cache != null && (DateTime.UtcNow - cache.Timestamp) < CacheDuration)
         {
             return cache.Skills.Select(e => e.ToSkillItem()).ToList();
         }
 
-        // Fetch fresh data from GitHub
         try
         {
+            // 1. Fetch directory listing from GitHub API
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
                 "https://api.github.com/repos/anthropic/claude-code/contents/skills");
@@ -132,53 +132,127 @@ public sealed class SkillRepositoryService
             request.Headers.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
             request.Headers.UserAgent.Add(
-                new ProductInfoHeaderValue("ClaudeCodePanel", "1.0"));
+                new ProductInfoHeaderValue("ClaudeConsole", "1.0"));
 
-            using var response = await _httpClient
-                .SendAsync(request)
-                .ConfigureAwait(false);
-
+            using var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
-            {
-                throw new SkillRepoException(
-                    $"Failed to fetch skill repository data (HTTP {(int)response.StatusCode})");
-            }
+                throw new SkillRepoException($"Failed to fetch skill repository (HTTP {(int)response.StatusCode})");
 
-            var json = await response.Content
-                .ReadAsStringAsync()
-                .ConfigureAwait(false);
-
+            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var items = JsonSerializer.Deserialize<List<GitHubContentItem>>(json);
             if (items == null)
-            {
-                throw new SkillRepoException(
-                    "Failed to parse skill repository data");
-            }
+                throw new SkillRepoException("Failed to parse skill repository data");
 
-            var skills = items
-                .Where(i => i.Type == "dir")
-                .Select(i => new SkillItem
+            var dirs = items.Where(i => i.Type == "dir").ToList();
+
+            // 2. Fetch SKILL.md metadata in parallel (raw CDN, no rate limit)
+            var skills = new List<SkillItem>();
+            var semaphore = new SemaphoreSlim(6); // Max 6 concurrent fetches
+
+            var tasks = dirs.Select(async dir =>
+            {
+                await semaphore.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    Id = i.Name,
-                    Name = CapitalizeWords(i.Name.Replace("-", " ")),
-                    Description = "",
-                    Source = SkillSource.Marketplace,
-                    IsInstalled = IsSkillInstalled(i.Name)
-                })
-                .ToList();
+                    var skill = await FetchSkillMetadataAsync(dir.Name).ConfigureAwait(false);
+                    lock (skills)
+                    {
+                        skills.Add(skill);
+                    }
+                }
+                catch
+                {
+                    // Fallback: use directory name
+                    var skill = new SkillItem
+                    {
+                        Id = dir.Name,
+                        Name = CapitalizeWords(dir.Name.Replace("-", " ")),
+                        Description = "",
+                        Source = SkillSource.Marketplace,
+                        IsInstalled = IsSkillInstalled(dir.Name)
+                    };
+                    lock (skills) { skills.Add(skill); }
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            // Sort by name
+            skills.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
 
             SaveCache(skills);
             return skills;
         }
-        catch (SkillRepoException)
-        {
-            throw;
-        }
+        catch (SkillRepoException) { throw; }
         catch (Exception ex)
         {
-            throw new SkillRepoException(
-                "Failed to fetch skill repository data", ex);
+            throw new SkillRepoException("Failed to fetch skill repository data", ex);
         }
+    }
+
+    /// <summary>
+    /// Fetches SKILL.md from raw.githubusercontent.com and extracts
+    /// YAML frontmatter fields (name, description).
+    /// </summary>
+    private async Task<SkillItem> FetchSkillMetadataAsync(string skillId)
+    {
+        var rawUrl = $"https://raw.githubusercontent.com/anthropic/claude-code/main/skills/{skillId}/SKILL.md";
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var content = await _httpClient.GetStringAsync(rawUrl, cts.Token).ConfigureAwait(false);
+
+        var (name, description) = ParseSkillMarkdownFrontmatter(content);
+
+        return new SkillItem
+        {
+            Id = skillId,
+            Name = !string.IsNullOrWhiteSpace(name)
+                ? name
+                : CapitalizeWords(skillId.Replace("-", " ")),
+            Description = description ?? "",
+            Source = SkillSource.Marketplace,
+            IsInstalled = IsSkillInstalled(skillId)
+        };
+    }
+
+    /// <summary>
+    /// Extracts YAML frontmatter (--- delimited block) from a SKILL.md
+    /// and reads the "name" and "description" fields.
+    /// </summary>
+    private static (string? name, string? description) ParseSkillMarkdownFrontmatter(string markdown)
+    {
+        string? name = null;
+        string? description = null;
+
+        // Look for YAML frontmatter between --- delimiters
+        var lines = markdown.Split('\n');
+        if (lines.Length < 3 || lines[0].Trim() != "---")
+            return (null, null);
+
+        var endIndex = Array.FindIndex(lines, 1, l => l.Trim() == "---");
+        if (endIndex < 0)
+            return (null, null);
+
+        for (int i = 1; i < endIndex; i++)
+        {
+            var line = lines[i];
+            var colonIdx = line.IndexOf(':');
+            if (colonIdx < 0) continue;
+
+            var key = line[..colonIdx].Trim().ToLowerInvariant();
+            var value = line[(colonIdx + 1)..].Trim().Trim('"', '\'');
+
+            if (key == "name" && name == null)
+                name = value;
+            else if (key == "description" && description == null)
+                description = value;
+        }
+
+        return (name, description);
     }
 
     // ── Search marketplace ────────────────────────────────

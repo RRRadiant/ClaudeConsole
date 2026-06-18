@@ -64,6 +64,7 @@ public partial class SkillsListView : UserControl
                         break;
                     case nameof(SkillManagerViewModel.MarketplaceSkills):
                     case nameof(SkillManagerViewModel.FilteredMarketplaceSkills):
+                    case nameof(SkillManagerViewModel.IsGithubUrl):
                         RefreshMarketplaceGrid();
                         break;
                     case nameof(SkillManagerViewModel.IsLoadingMarketplace):
@@ -150,11 +151,24 @@ public partial class SkillsListView : UserControl
         MarketplaceGrid.Items.Clear();
         if (_vm == null) return;
 
+        // If GitHub URL detected, show a special install card first
+        if (_vm.IsGithubUrl && _vm.GithubUrlSkill != null)
+        {
+            var urlCard = CreateSkillCard(_vm.GithubUrlSkill, SkillCardMode.Marketplace);
+            urlCard.InstallClicked += async (_, _) =>
+            {
+                await _vm.InstallGithubUrlSkillAsync();
+                RefreshInstalledList();
+                RefreshMarketplaceGrid();
+            };
+            MarketplaceGrid.Items.Add(urlCard);
+        }
+
         var skills = _vm.FilteredMarketplaceSkills.Count > 0
             ? _vm.FilteredMarketplaceSkills
             : _vm.MarketplaceSkills;
 
-        if (skills.Count == 0 && !_vm.IsLoadingMarketplace)
+        if (skills.Count == 0 && !_vm.IsLoadingMarketplace && !_vm.IsGithubUrl)
         {
             MarketplaceEmpty.Visibility = Visibility.Visible;
             return;
