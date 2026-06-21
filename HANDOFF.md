@@ -43,7 +43,7 @@ Requires: **.NET 9.0 SDK** (https://dotnet.microsoft.com/download/dotnet/9.0)
 - **Skill Marketplace** — fetches official skill list with real names/descriptions from SKILL.md, GitHub URL auto-detection in search bar, built-in offline fallback (37 skills), mirror retry for China network
 - **Installer Panel** — one-click Claude Code CLI install/uninstall via npm/winget
 - **Env Check Panel** — detects Node.js, npm, Git status and versions
-- **Version Display** — sidebar footer shows `v1.0.0` + update status dot (green "已是最新" / grey "检查中…" / red "发现新版本")
+- **Version Display** — sidebar footer shows `v1.1.0` + update status dot (green "已是最新" / grey "检查中…" / red "发现新版本")
 
 ---
 
@@ -58,7 +58,7 @@ ClaudeCodePanel.Windows/
 ├── ClaudeConsole-Portable.zip          ← latest portable build
 ├── release/ClaudeConsole.exe           ← latest self-contained single-file exe
 └── src/ClaudeCodePanel.Windows/
-    ├── ClaudeCodePanel.Windows.csproj  ← net9.0-windows, AssemblyName=ClaudeConsole, Version=1.0.0
+    ├── ClaudeCodePanel.Windows.csproj  ← net9.0-windows, AssemblyName=ClaudeConsole, Version=1.1.0
     ├── App.xaml / App.xaml.cs          ← DI container, global exception handlers, lifecycle
     ├── Models/
     │   ├── APIProvider.cs              ← Anthropic/OpenAI/DeepSeek/Custom enum + extensions

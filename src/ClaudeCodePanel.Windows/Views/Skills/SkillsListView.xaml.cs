@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -48,8 +49,15 @@ public partial class SkillsListView : UserControl
         _vm.LoadInstalledSkills();
         RefreshInstalledList();
 
-        await _vm.LoadMarketplaceSkillsAsync();
-        RefreshMarketplaceGrid();
+        try
+        {
+            await _vm.LoadMarketplaceSkillsAsync();
+            RefreshMarketplaceGrid();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SkillsListView] LoadMarketplaceSkillsAsync failed: {ex.Message}");
+        }
 
         // React to VM property changes
         _vm.PropertyChanged += (_, args) =>
@@ -250,7 +258,15 @@ public partial class SkillsListView : UserControl
 
         _vm.InstallPathOrURL = InstallDialog.PathOrURL;
         _vm.InstallSource = InstallDialog.CurrentSource;
-        await _vm.InstallFromSourceAsync();
+        try
+        {
+            await _vm.InstallFromSourceAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SkillsListView] InstallFromSourceAsync failed: {ex.Message}");
+            return;
+        }
         InstallDialog.Visibility = Visibility.Collapsed;
         RefreshInstalledList();
     }

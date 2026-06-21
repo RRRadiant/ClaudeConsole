@@ -42,7 +42,7 @@ public partial class DashboardViewModel : ObservableObject
     public async Task LoadSummaryAsync()
     {
         // ── 1. Check Claude CLI via InstallerService (thorough Windows detection) ──
-        var status = await Task.Run(() => InstallerService.Instance.GetClaudeStatus());
+        var status = await InstallerService.Instance.GetClaudeStatusAsync();
         bool claudeInstalled = status.Installed;
         string claudeVersion = status.Version ?? "";
 

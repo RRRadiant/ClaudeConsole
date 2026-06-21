@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using ClaudeCodePanel.Windows.ViewModels;
@@ -30,7 +32,14 @@ public partial class DashboardView : UserControl
         if (_vm == null) return;
 
         DataContext = _vm;
-        await _vm.LoadSummaryAsync();
+        try
+        {
+            await _vm.LoadSummaryAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[DashboardView] LoadSummaryAsync failed: {ex.Message}");
+        }
 
         ApplyStatus();
 

@@ -19,5 +19,8 @@ Thumbs.db
 *.bak
 *.orig
 ~$*
+## Release artifacts
+/release/
+/publish-final/
 /ClaudeConsole-Portable.zip
 /publish/

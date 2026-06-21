@@ -168,6 +168,28 @@ public sealed class ConfigFileService
         return File.ReadAllText(path);
     }
 
+    /// <summary>
+    /// Reads and deserializes a JSON file as Dictionary&lt;string, JsonElement&gt;.
+    /// Returns null if the file doesn't exist or isn't a valid JSON object.
+    /// Does NOT throw — callers that need exceptions should use <see cref="ReadJSON"/>.
+    /// </summary>
+    public Dictionary<string, JsonElement>? TryReadJSON(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
+                return null;
+
+            var json = File.ReadAllText(path);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+            return dict;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public Dictionary<string, JsonElement>? ReadJSON(string path)
     {
         var json = File.ReadAllText(path);

@@ -41,7 +41,7 @@ public sealed class InstallerService
     /// Find npm's full path — PATH may not be refreshed after install.
     /// Searches 15+ known locations and falls back to PowerShell discovery.
     /// </summary>
-    private static string FindNpm()
+    private static async Task<string> FindNpmAsync()
     {
         var homedir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -71,46 +71,53 @@ public sealed class InstallerService
             if (File.Exists(p)) return p;
         }
 
-        // PowerShell fallback
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell",
-                Arguments = "-NoProfile -Command \"(Get-Command npm.cmd -ErrorAction SilentlyContinue).Source\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            using var p = Process.Start(psi);
-            p?.WaitForExit(5000);
-            var result = p?.StandardOutput.ReadToEnd().Trim();
-            if (!string.IsNullOrWhiteSpace(result) && File.Exists(result))
-                return result;
-        }
-        catch { }
+        // PowerShell fallback — async process runner
+        var result = await RunQuickProcessAsync("powershell",
+            "-NoProfile -Command \"(Get-Command npm.cmd -ErrorAction SilentlyContinue).Source\"");
+        if (!string.IsNullOrWhiteSpace(result) && File.Exists(result))
+            return result;
 
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell",
-                Arguments = "-NoProfile -Command \"(Get-Command npm -ErrorAction SilentlyContinue).Source\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            using var p = Process.Start(psi);
-            p?.WaitForExit(5000);
-            var result = p?.StandardOutput.ReadToEnd().Trim();
-            if (!string.IsNullOrWhiteSpace(result) && File.Exists(result))
-                return result;
-        }
-        catch { }
+        result = await RunQuickProcessAsync("powershell",
+            "-NoProfile -Command \"(Get-Command npm -ErrorAction SilentlyContinue).Source\"");
+        if (!string.IsNullOrWhiteSpace(result) && File.Exists(result))
+            return result;
 
         return "npm"; // Last resort: hope it's in PATH
+    }
+
+    /// <summary>
+    /// Runs a quick process synchronously-read (small output), drains stdout,
+    /// and returns trimmed output. Uses WaitForExitAsync to avoid deadlocks.
+    /// </summary>
+    private static async Task<string?> RunQuickProcessAsync(string fileName, string arguments, int timeoutMs = 5000)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            using var p = Process.Start(psi);
+            if (p == null) return null;
+
+            var stdoutTask = p.StandardOutput.ReadToEndAsync();
+            using var cts = new CancellationTokenSource(timeoutMs);
+            try { await p.WaitForExitAsync(cts.Token); }
+            catch (OperationCanceledException) { try { p.Kill(); } catch { } return null; }
+
+            var stdout = await stdoutTask;
+            return stdout.Trim();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[InstallerService] RunQuickProcessAsync failed: {ex.Message}");
+            return null;
+        }
     }
 
     // ── Process runner ─────────────────────────────────────
@@ -176,7 +183,7 @@ public sealed class InstallerService
     {
         if (method == InstallMethod.Npm)
         {
-            var npm = FindNpm();
+            var npm = await FindNpmAsync();
             return await RunCommandAsync($"\"{npm}\" install -g {ClaudePkg} --registry=https://registry.npmmirror.com");
         }
         if (method == InstallMethod.Winget)
@@ -189,7 +196,7 @@ public sealed class InstallerService
 
     public async Task<InstallResult> UninstallCliAsync()
     {
-        var npm = FindNpm();
+        var npm = await FindNpmAsync();
         return await RunCommandAsync($"\"{npm}\" uninstall -g {ClaudePkg}", 60_000);
     }
 
@@ -198,8 +205,9 @@ public sealed class InstallerService
     /// <summary>
     /// Detect if Claude Code CLI is installed by searching PATH,
     /// known paths, npm global bin directory, and fallback shell.
+    /// All process calls are async to avoid deadlocks.
     /// </summary>
-    public CliStatus GetClaudeStatus()
+    public async Task<CliStatus> GetClaudeStatusAsync()
     {
         const string binaryName = "claude";
         var homedir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -207,45 +215,14 @@ public sealed class InstallerService
 
         // 1. PATH search via 'where'
         var foundPaths = new List<string>();
-        try
+        var whereOutput = await RunQuickProcessAsync("cmd.exe", $"/c where {binaryName} 2>nul");
+        if (!string.IsNullOrWhiteSpace(whereOutput))
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c where {binaryName} 2>nul",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            using var p = Process.Start(psi);
-            p?.WaitForExit(5000);
-            var output = p?.StandardOutput.ReadToEnd().Trim();
-            if (!string.IsNullOrWhiteSpace(output))
-            {
-                foundPaths.AddRange(output.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)));
-            }
+            foundPaths.AddRange(whereOutput.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)));
         }
-        catch { }
 
         // 2. Known installation paths
-        string? npmBin = null;
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "npm",
-                Arguments = "bin -g",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            using var p = Process.Start(psi);
-            p?.WaitForExit(5000);
-            npmBin = p?.StandardOutput.ReadToEnd().Trim();
-        }
-        catch { }
+        var npmBin = await RunQuickProcessAsync("npm", "bin -g");
 
         var bases = new List<string>
         {
@@ -270,47 +247,17 @@ public sealed class InstallerService
         foreach (var candidatePath in foundPaths)
         {
             if (string.IsNullOrWhiteSpace(candidatePath)) continue;
-            try
-            {
-                if (!File.Exists(candidatePath)) continue;
+            if (!File.Exists(candidatePath)) continue;
 
-                var psi = new ProcessStartInfo
-                {
-                    FileName = candidatePath,
-                    Arguments = "--version",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                };
-                using var p = Process.Start(psi);
-                p?.WaitForExit(10_000);
-                var version = p?.StandardOutput.ReadToEnd().Trim();
-                if (!string.IsNullOrWhiteSpace(version))
-                    return new CliStatus { Installed = true, Version = version, Path = candidatePath };
-            }
-            catch { }
+            var version = await RunQuickProcessAsync(candidatePath, "--version", 10_000);
+            if (!string.IsNullOrWhiteSpace(version))
+                return new CliStatus { Installed = true, Version = version, Path = candidatePath };
         }
 
         // 4. Last resort: try running bare command
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c {binaryName} --version",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            using var p = Process.Start(psi);
-            p?.WaitForExit(10_000);
-            var version = p?.StandardOutput.ReadToEnd().Trim();
-            if (!string.IsNullOrWhiteSpace(version))
-                return new CliStatus { Installed = true, Version = version, Path = binaryName };
-        }
-        catch { }
+        var bareVersion = await RunQuickProcessAsync("cmd.exe", $"/c {binaryName} --version", 10_000);
+        if (!string.IsNullOrWhiteSpace(bareVersion))
+            return new CliStatus { Installed = true, Version = bareVersion, Path = binaryName };
 
         return new CliStatus { Installed = false, Version = null, Path = null };
     }

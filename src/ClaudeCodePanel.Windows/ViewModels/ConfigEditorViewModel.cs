@@ -54,9 +54,9 @@ public partial class ConfigEditorViewModel : ObservableObject
     //  Constructor
     // ──────────────────────────────────────────────
 
-    public ConfigEditorViewModel()
+    public ConfigEditorViewModel(ConfigFileService? configFileService = null)
     {
-        _configFileService = ConfigFileService.Instance;
+        _configFileService = configFileService ?? ConfigFileService.Instance;
     }
 
     // ──────────────────────────────────────────────

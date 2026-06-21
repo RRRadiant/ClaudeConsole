@@ -9,7 +9,7 @@ namespace ClaudeCodePanel.Windows.ViewModels;
 
 public partial class InstallerViewModel : ObservableObject
 {
-    private readonly InstallerService _installer = InstallerService.Instance;
+    private readonly InstallerService _installer;
 
     [ObservableProperty]
     private InstallerService.CliStatus _claudeStatus = new() { Installed = false };
@@ -26,8 +26,9 @@ public partial class InstallerViewModel : ObservableObject
     [ObservableProperty]
     private bool _showStatusMessage;
 
-    public InstallerViewModel()
+    public InstallerViewModel(InstallerService? installerService = null)
     {
+        _installer = installerService ?? InstallerService.Instance;
         _ = RefreshStatusAsync().ContinueWith(t =>
         {
             if (t.IsFaulted && t.Exception != null)
@@ -40,7 +41,7 @@ public partial class InstallerViewModel : ObservableObject
     {
         try
         {
-            ClaudeStatus = await Task.Run(() => _installer.GetClaudeStatus());
+            ClaudeStatus = await _installer.GetClaudeStatusAsync();
         }
         catch { }
     }

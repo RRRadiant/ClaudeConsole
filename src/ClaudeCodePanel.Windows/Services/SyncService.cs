@@ -117,7 +117,7 @@ public sealed class SyncService
     /// Apply an environment dictionary to a SyncedConfig, returning the updated config.
     /// Extracts: base URL (with provider detection), auth token, selected model, enabled models.
     /// </summary>
-    private static SyncedConfig ApplyEnv(Dictionary<string, string> env, SyncedConfig config)
+    internal static SyncedConfig ApplyEnv(Dictionary<string, string> env, SyncedConfig config)
     {
         // ANTHROPIC_BASE_URL → baseURL + provider detection
         if (env.TryGetValue("ANTHROPIC_BASE_URL", out var baseURL) && !string.IsNullOrEmpty(baseURL))

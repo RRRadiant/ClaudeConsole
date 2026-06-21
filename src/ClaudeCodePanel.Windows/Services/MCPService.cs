@@ -174,6 +174,16 @@ public sealed class MCPService
         try
         {
             process.EnableRaisingEvents = true;
+
+            // Guard: if process already exited before we registered the handler,
+            // handle it synchronously to prevent event-handler leak
+            if (process.HasExited)
+            {
+                if (process.ExitCode == 0 || process.ExitCode == 1)
+                    return MCPConnectionResult.Success("命令可执行");
+                return MCPConnectionResult.Failure($"退出码 {process.ExitCode}");
+            }
+
             process.Start();
 
             // Begin reading stdout/stderr asynchronously to avoid deadlocks

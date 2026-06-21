@@ -290,7 +290,7 @@ public sealed class SkillRepositoryService
     /// Extracts YAML frontmatter (--- delimited block) from a SKILL.md
     /// and reads the "name" and "description" fields.
     /// </summary>
-    private static (string? name, string? description) ParseSkillMarkdownFrontmatter(string markdown)
+    internal static (string? name, string? description) ParseSkillMarkdownFrontmatter(string markdown)
     {
         string? name = null;
         string? description = null;

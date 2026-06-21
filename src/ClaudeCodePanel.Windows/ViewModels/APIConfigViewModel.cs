@@ -38,6 +38,7 @@ public partial class APIConfigViewModel : ObservableObject
     // ──────────────────────────────────────────────
     private readonly ConfigFileService _configFileService;
     private readonly CredentialService _credentialService;
+    private readonly SyncService _syncService;
     private static readonly HttpClient _httpClient = new()
     {
         DefaultRequestHeaders = { { "User-Agent", "ClaudeCodePanel-Windows/1.0" } }
@@ -128,10 +129,14 @@ public partial class APIConfigViewModel : ObservableObject
     //  Constructor
     // ──────────────────────────────────────────────
 
-    public APIConfigViewModel(ConfigFileService configFileService, CredentialService credentialService)
+    public APIConfigViewModel(
+        ConfigFileService configFileService,
+        CredentialService credentialService,
+        SyncService? syncService = null)
     {
         _configFileService = configFileService;
         _credentialService = credentialService;
+        _syncService = syncService ?? SyncService.Instance;
     }
 
     // ──────────────────────────────────────────────
@@ -189,7 +194,7 @@ public partial class APIConfigViewModel : ObservableObject
     public void LoadConfig()
     {
         // ── 1. PRIMARY: SyncService (reads env vars from settings.json + settings.local.json) ──
-        var synced = SyncService.Instance.SyncAll();
+        var synced = _syncService.SyncAll();
         if (synced.DidSync)
         {
             SelectedProvider = synced.Provider;

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using ClaudeCodePanel.Windows.Services;
@@ -19,6 +20,27 @@ public partial class App : Application
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
+        // Global exception handler — catches anything that escapes try/catch
+        DispatcherUnhandledException += (_, args) =>
+        {
+            MessageBox.Show(
+                $"未处理异常:\n{args.Exception}",
+                "ClaudeConsole Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            args.Handled = true;
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            var ex = args.ExceptionObject as Exception;
+            MessageBox.Show(
+                $"致命错误:\n{ex}",
+                "ClaudeConsole Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        };
+
         try
         {
             var services = new ServiceCollection();
@@ -53,9 +75,12 @@ public partial class App : Application
             var watcher = Services.GetRequiredService<FileWatcherService>();
             watcher.WatchAllConfigFiles();
             var configService = Services.GetRequiredService<ConfigFileService>();
-            try { configService.EnsureDirectoryExists(configService.SkillsDirectory); } catch { }
-            try { configService.EnsureDirectoryExists(configService.AgentsDirectory); } catch { }
-            try { configService.EnsureDirectoryExists(configService.CommandsDirectory); } catch { }
+            try { configService.EnsureDirectoryExists(configService.SkillsDirectory); }
+            catch (Exception ex) { Debug.WriteLine($"[App] Failed to create skills dir: {ex.Message}"); }
+            try { configService.EnsureDirectoryExists(configService.AgentsDirectory); }
+            catch (Exception ex) { Debug.WriteLine($"[App] Failed to create agents dir: {ex.Message}"); }
+            try { configService.EnsureDirectoryExists(configService.CommandsDirectory); }
+            catch (Exception ex) { Debug.WriteLine($"[App] Failed to create commands dir: {ex.Message}"); }
 
             // Create and show the main window via DI
             var mainWindow = Services.GetRequiredService<MainWindow>();

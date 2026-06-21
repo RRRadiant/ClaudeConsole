@@ -295,6 +295,7 @@ public partial class APIConfigView : UserControl
         DetectionActionsPanel.Visibility = Visibility.Collapsed;
 
         await _vm.DetectModelsAsync();
+        // Errors are surfaced via _vm.DetectionMessage — no need to catch here
 
         // Restore normal state
         DetectingPanel.Visibility = Visibility.Collapsed;

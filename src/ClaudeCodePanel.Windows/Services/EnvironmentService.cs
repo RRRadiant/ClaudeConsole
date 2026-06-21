@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ClaudeCodePanel.Windows.Services;
 
@@ -40,10 +42,10 @@ public sealed class EnvironmentService
     // ── Process helpers ────────────────────────────────────
 
     /// <summary>
-    /// Runs a process, drains stdout/stderr, and returns (exitCode, stdout).
-    /// Avoids deadlocks by reading output before WaitForExit.
+    /// Runs a process, drains stdout/stderr asynchronously, and returns (exitCode, stdout).
+    /// Uses WaitForExitAsync to avoid deadlocks — stdout/stderr are read concurrently.
     /// </summary>
-    private static (int exitCode, string stdout, string stderr) RunProcess(
+    private static async Task<(int exitCode, string stdout, string stderr)> RunProcessAsync(
         string fileName, string arguments, int timeoutMs = 5000)
     {
         try
@@ -62,20 +64,28 @@ public sealed class EnvironmentService
             if (process == null)
                 return (-1, "", "Failed to start process");
 
-            // Read stdout/stderr asynchronously, then wait
+            // Read stdout/stderr asynchronously concurrently with the wait
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();
 
-            if (!process.WaitForExit(timeoutMs))
+            using var cts = new CancellationTokenSource(timeoutMs);
+            try
+            {
+                await process.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
             {
                 try { process.Kill(); } catch { }
                 return (-1, "", "Timeout");
             }
 
-            return (process.ExitCode, stdoutTask.Result.Trim(), stderrTask.Result.Trim());
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+            return (process.ExitCode, stdout.Trim(), stderr.Trim());
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[EnvironmentService] RunProcessAsync failed ({fileName} {arguments}): {ex.Message}");
             return (-1, "", "");
         }
     }
@@ -83,9 +93,9 @@ public sealed class EnvironmentService
     /// <summary>
     /// Finds the first path for a command using 'where', or null if not in PATH.
     /// </summary>
-    private static string? FindInPath(string cmd)
+    private static async Task<string?> FindInPathAsync(string cmd)
     {
-        var (exitCode, stdout, _) = RunProcess("where", cmd);
+        var (exitCode, stdout, _) = await RunProcessAsync("where", cmd);
         if (exitCode == 0 && !string.IsNullOrWhiteSpace(stdout))
         {
             // 'where' returns one path per line; take the first one
@@ -100,13 +110,13 @@ public sealed class EnvironmentService
     /// Check if a command exists by trying 'where', then searching
     /// common installation directories with .cmd/.exe variants.
     /// </summary>
-    private static bool HasCmd(string cmd)
+    private static async Task<bool> HasCmdAsync(string cmd)
     {
         // 1. PATH search via 'where'
-        var pathFromWhere = FindInPath(cmd);
+        var pathFromWhere = await FindInPathAsync(cmd);
         if (!string.IsNullOrEmpty(pathFromWhere) && File.Exists(pathFromWhere))
         {
-            var (exitCode, _, _) = RunProcess(pathFromWhere, "--version");
+            var (exitCode, _, _) = await RunProcessAsync(pathFromWhere, "--version");
             if (exitCode == 0) return true;
         }
 
@@ -133,7 +143,7 @@ public sealed class EnvironmentService
                 var fullPath = Path.Combine(dir, $"{cmd}{ext}");
                 if (File.Exists(fullPath))
                 {
-                    var (exitCode, _, _) = RunProcess(fullPath, "--version");
+                    var (exitCode, _, _) = await RunProcessAsync(fullPath, "--version");
                     if (exitCode == 0) return true;
                 }
             }
@@ -145,22 +155,22 @@ public sealed class EnvironmentService
     /// <summary>
     /// Get the installed version of a command, or null if not found.
     /// </summary>
-    private static string? GetCmdVersion(string cmd)
+    private static async Task<string?> GetCmdVersionAsync(string cmd)
     {
-        var foundPath = FindInPath(cmd);
+        var foundPath = await FindInPathAsync(cmd);
         if (string.IsNullOrEmpty(foundPath) || !File.Exists(foundPath))
             return null;
 
-        var (exitCode, stdout, _) = RunProcess(foundPath, "--version");
+        var (exitCode, stdout, _) = await RunProcessAsync(foundPath, "--version");
         return (exitCode == 0 && !string.IsNullOrWhiteSpace(stdout)) ? stdout : null;
     }
 
     // ── Git-specific detection ─────────────────────────────
 
-    private static bool HasGit()
+    private static async Task<bool> HasGitAsync()
     {
         // 1. PATH search
-        if (!string.IsNullOrEmpty(FindInPath("git")))
+        if (!string.IsNullOrEmpty(await FindInPathAsync("git")))
             return true;
 
         // 2. Common Git directories
@@ -178,7 +188,7 @@ public sealed class EnvironmentService
         {
             if (File.Exists(gitPath))
             {
-                var (exitCode, _, _) = RunProcess(gitPath, "--version");
+                var (exitCode, _, _) = await RunProcessAsync(gitPath, "--version");
                 if (exitCode == 0) return true;
             }
         }
@@ -186,9 +196,9 @@ public sealed class EnvironmentService
         return false;
     }
 
-    private static string? GetGitVersion()
+    private static async Task<string?> GetGitVersionAsync()
     {
-        var (exitCode, stdout, _) = RunProcess("git", "--version");
+        var (exitCode, stdout, _) = await RunProcessAsync("git", "--version");
         return (exitCode == 0 && !string.IsNullOrWhiteSpace(stdout)) ? stdout : null;
     }
 
@@ -197,11 +207,11 @@ public sealed class EnvironmentService
     /// <summary>
     /// Check all environment dependencies (Node.js, npm, Git).
     /// </summary>
-    public List<DepCheckResult> CheckAllDeps()
+    public async Task<List<DepCheckResult>> CheckAllDepsAsync()
     {
-        var nodeInstalled = HasCmd("node");
-        var npmInstalled = HasCmd("npm");
-        var gitInstalled = HasGit();
+        var nodeInstalled = await HasCmdAsync("node");
+        var npmInstalled = await HasCmdAsync("npm");
+        var gitInstalled = await HasGitAsync();
 
         var results = new List<DepCheckResult>
         {
@@ -209,21 +219,21 @@ public sealed class EnvironmentService
                 name: "node",
                 description: "Node.js",
                 installed: nodeInstalled,
-                version: nodeInstalled ? GetCmdVersion("node") : null,
+                version: nodeInstalled ? await GetCmdVersionAsync("node") : null,
                 downloadUrl: "https://nodejs.org/en/download"
             ),
             new(
                 name: "npm",
                 description: "npm",
                 installed: npmInstalled,
-                version: npmInstalled ? GetCmdVersion("npm") : null,
+                version: npmInstalled ? await GetCmdVersionAsync("npm") : null,
                 downloadUrl: string.Empty
             ),
             new(
                 name: "git",
                 description: "Git",
                 installed: gitInstalled,
-                version: gitInstalled ? GetGitVersion() : null,
+                version: gitInstalled ? await GetGitVersionAsync() : null,
                 downloadUrl: "https://git-scm.com/download/win"
             ),
         };

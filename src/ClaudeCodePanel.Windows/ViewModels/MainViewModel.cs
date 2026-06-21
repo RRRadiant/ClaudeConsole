@@ -47,6 +47,11 @@ public record SidebarItem(string IconGlyph, string Title, string Description, Ma
 public partial class MainViewModel : ObservableObject
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly UpdateService _updateService;
+
+    // ── Cached ViewModel references ─────────────────────────────────
+
+    private readonly Dictionary<MainPanelType, object> _viewModelCache = new();
 
     // ── Observable properties ──────────────────────────────────────
 
@@ -84,7 +89,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>Current app version string (e.g. "v1.0.0").</summary>
     [ObservableProperty]
-    private string _currentVersionText = "v1.0.0";
+    private string _currentVersionText = "v1.1.0";
 
     /// <summary>Update status shown in the sidebar: 检查中… / 已是最新 / 发现新版本.</summary>
     [ObservableProperty]
@@ -118,9 +123,10 @@ public partial class MainViewModel : ObservableObject
 
     // ── Constructor ────────────────────────────────────────────────
 
-    public MainViewModel(IServiceProvider serviceProvider)
+    public MainViewModel(IServiceProvider serviceProvider, UpdateService? updateService = null)
     {
         _serviceProvider = serviceProvider;
+        _updateService = updateService ?? UpdateService.Instance;
 
         // Start on the dashboard panel.
         Navigate(MainPanelType.Dashboard);
@@ -154,7 +160,7 @@ public partial class MainViewModel : ObservableObject
         UpdateStatusText = "检查中…";
         IsUpdateAvailable = false;
 
-        var update = await UpdateService.Instance.CheckForUpdateAsync();
+        var update = await _updateService.CheckForUpdateAsync();
         if (update is not { IsNewer: true })
         {
             UpdateStatusText = "已是最新";
@@ -204,16 +210,24 @@ public partial class MainViewModel : ObservableObject
     public void Navigate(MainPanelType panel)
     {
         SelectedPanel = panel;
-        SelectedPanelViewModel = panel switch
+
+        // Resolve from cache or DI (ViewModels are singletons, so caching avoids container lookups)
+        if (!_viewModelCache.TryGetValue(panel, out var vm))
         {
-            MainPanelType.Dashboard    => _serviceProvider.GetRequiredService<DashboardViewModel>(),
-            MainPanelType.ApiConfig    => _serviceProvider.GetRequiredService<APIConfigViewModel>(),
-            MainPanelType.ConfigEditor => _serviceProvider.GetRequiredService<ConfigEditorViewModel>(),
-            MainPanelType.McpManager   => _serviceProvider.GetRequiredService<MCPManagerViewModel>(),
-            MainPanelType.SkillManager => _serviceProvider.GetRequiredService<SkillManagerViewModel>(),
-            MainPanelType.Installer    => _serviceProvider.GetRequiredService<InstallerViewModel>(),
-            MainPanelType.EnvCheck     => _serviceProvider.GetRequiredService<EnvCheckViewModel>(),
-            _ => throw new ArgumentOutOfRangeException(nameof(panel), panel, null)
-        };
+            vm = panel switch
+            {
+                MainPanelType.Dashboard    => _serviceProvider.GetRequiredService<DashboardViewModel>(),
+                MainPanelType.ApiConfig    => _serviceProvider.GetRequiredService<APIConfigViewModel>(),
+                MainPanelType.ConfigEditor => _serviceProvider.GetRequiredService<ConfigEditorViewModel>(),
+                MainPanelType.McpManager   => _serviceProvider.GetRequiredService<MCPManagerViewModel>(),
+                MainPanelType.SkillManager => _serviceProvider.GetRequiredService<SkillManagerViewModel>(),
+                MainPanelType.Installer    => _serviceProvider.GetRequiredService<InstallerViewModel>(),
+                MainPanelType.EnvCheck     => _serviceProvider.GetRequiredService<EnvCheckViewModel>(),
+                _ => throw new ArgumentOutOfRangeException(nameof(panel), panel, null)
+            };
+            _viewModelCache[panel] = vm;
+        }
+
+        SelectedPanelViewModel = vm;
     }
 }

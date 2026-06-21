@@ -18,6 +18,24 @@ namespace ClaudeCodePanel.Windows.ViewModels;
 /// </summary>
 public partial class SkillManagerViewModel : ObservableObject
 {
+    // ── Services ──────────────────────────────────────────────────
+
+    private readonly SkillRepositoryService _skillRepo;
+    private readonly SyncService _syncService;
+    private readonly ConfigFileService _configFileService;
+
+    // ── Constructor ───────────────────────────────────────────────
+
+    public SkillManagerViewModel(
+        SkillRepositoryService? skillRepositoryService = null,
+        SyncService? syncService = null,
+        ConfigFileService? configFileService = null)
+    {
+        _skillRepo = skillRepositoryService ?? SkillRepositoryService.Instance;
+        _syncService = syncService ?? SyncService.Instance;
+        _configFileService = configFileService ?? ConfigFileService.Instance;
+    }
+
     // ── SkillTab enum ─────────────────────────────────────────────
 
     /// <summary>
@@ -186,7 +204,7 @@ public partial class SkillManagerViewModel : ObservableObject
                 Name = $"{owner}/{repo}",
                 Description = $"从 GitHub 安装 {owner}/{repo}",
                 Source = SkillSource.GitURL,
-                IsInstalled = SkillRepositoryService.Instance.IsSkillInstalled(id)
+                IsInstalled = _skillRepo.IsSkillInstalled(id)
             };
 
             // Also set install sheet values for the dialog
@@ -217,7 +235,7 @@ public partial class SkillManagerViewModel : ObservableObject
         {
             await Task.Run(() =>
             {
-                SkillRepositoryService.Instance.InstallSkill(
+                _skillRepo.InstallSkill(
                     id: GithubUrlSkill.Id,
                     source: SkillSource.GitURL,
                     pathOrURL: url.EndsWith(".git") ? url : url + ".git");
@@ -256,11 +274,11 @@ public partial class SkillManagerViewModel : ObservableObject
     /// </summary>
     public void LoadInstalledSkills()
     {
-        var skills = SkillRepositoryService.Instance.ListInstalledSkills();
+        var skills = _skillRepo.ListInstalledSkills();
         var seenIDs = new HashSet<string>(skills.Select(s => s.Id));
 
         // Merge with skills detected via SyncService (from claude.json enabledPlugins, etc.)
-        var synced = SyncService.Instance.SyncAll();
+        var synced = _syncService.SyncAll();
         if (synced.DidSync && synced.SkillIds.Count > 0)
         {
             foreach (var id in synced.SkillIds)
@@ -271,7 +289,7 @@ public partial class SkillManagerViewModel : ObservableObject
 
                     // Check whether the skill directory exists on disk
                     var skillPath = Path.Combine(
-                        ConfigFileService.Instance.SkillsDirectory,
+                        _configFileService.SkillsDirectory,
                         id);
                     var isOnDisk = Directory.Exists(skillPath);
 
@@ -303,7 +321,7 @@ public partial class SkillManagerViewModel : ObservableObject
         IsLoadingMarketplace = true;
         try
         {
-            MarketplaceSkills = await SkillRepositoryService.Instance
+            MarketplaceSkills = await _skillRepo
                 .SearchMarketplaceAsync(SearchQuery)
                 .ConfigureAwait(true);
         }
@@ -328,7 +346,7 @@ public partial class SkillManagerViewModel : ObservableObject
         {
             await Task.Run(() =>
             {
-                SkillRepositoryService.Instance.InstallSkill(
+                _skillRepo.InstallSkill(
                     id: skill.Id,
                     source: skill.Source,
                     pathOrURL: "");
@@ -357,7 +375,7 @@ public partial class SkillManagerViewModel : ObservableObject
         {
             await Task.Run(() =>
             {
-                SkillRepositoryService.Instance.UninstallSkill(id: skill.Id);
+                _skillRepo.UninstallSkill(id: skill.Id);
             });
 
             skill.IsInstalled = false;
@@ -398,7 +416,7 @@ public partial class SkillManagerViewModel : ObservableObject
 
             await Task.Run(() =>
             {
-                SkillRepositoryService.Instance.InstallSkill(
+                _skillRepo.InstallSkill(
                     id: id,
                     source: InstallSource,
                     pathOrURL: InstallPathOrURL);

@@ -72,10 +72,12 @@ public partial class MCPManagerViewModel : ObservableObject
 
     // ── Constructor ──────────────────────────────────────────
 
-    public MCPManagerViewModel()
+    public MCPManagerViewModel(
+        ConfigFileService? configFileService = null,
+        MCPService? mcpService = null)
     {
-        _configFileService = ConfigFileService.Instance;
-        _mcpService = MCPService.Instance;
+        _configFileService = configFileService ?? ConfigFileService.Instance;
+        _mcpService = mcpService ?? MCPService.Instance;
     }
 
     // ── Load ─────────────────────────────────────────────────
