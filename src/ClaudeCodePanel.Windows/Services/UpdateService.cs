@@ -17,7 +17,7 @@ public sealed class UpdateService
     public static UpdateService Instance { get; } = new();
 
     // ── Configure these for your GitHub repo ──────────────────────
-    private const string GitHubOwner = "Lyxxxx718";
+    private const string GitHubOwner = "RRRadiant";
     private const string GitHubRepo = "ClaudeConsole";
     // ──────────────────────────────────────────────────────────────
 

@@ -138,7 +138,7 @@ Startup → CheckForUpdateAsync()
 
 ## GitHub Release
 
-- **Repo:** https://github.com/Lyxxxx718/ClaudeConsole
+- **Repo:** https://github.com/RRRadiant/ClaudeConsole
 - **Release tag format:** `v1.0.0` (semver, optional `v` prefix)
 - **Upload:** `release/ClaudeConsole.exe`
 - **UpdateService.cs line 22:** bump `CurrentVersion` constant when releasing new version
