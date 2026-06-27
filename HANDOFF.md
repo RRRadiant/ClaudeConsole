@@ -24,16 +24,21 @@ Requires: **.NET 9.0 SDK** (https://dotnet.microsoft.com/download/dotnet/9.0)
 
 ## Build Status
 
-**Current:** 0 errors, 0 warnings — clean build on `dotnet build -c Release`.
+**Current:** 0 errors, 0 warnings, 92 tests passing — clean.
 
-### Completed Optimizations (22 items from audit)
+### v1.1.0 – Code Audit Fixes (13 items)
 
 | Category | Changes |
 |----------|---------|
-| 🔴 Bug fixes (3) | Marketplace install implemented (shallow clone), removed MCPService StopAll dead code, CredentialService Exists no longer uses exception-as-control-flow (TryRead) |
-| 🟠 Performance (4) | JSON EnumerateObject instead of GetRawText+Deserialize (9 call sites), SkillManager filtered properties cached, MCPDisplayNameStore write debounce (2s), dead code removal |
-| 🟡 Architecture (5) | MainWindow DI constructor injection, FileWatcherService.OnChange Action→event, PersistToClaudeJSONAsync→sync void, deleted unused ClaudeConfig.cs, SkillItem now ObservableObject |
-| 🟢 Quality (10) | EnvironmentService merged helpers + process deadlock fix, InstallerService RunCommandAsync race fix, DashboardViewModel merged dual ReadJSON, AllCases static readonly, DashboardSummary RemoveRange+UtcNow, Windows version RuntimeInformation, fire-and-forget exception logging, Anthropic models extracted to constant |
+| 🔴 Fixes (2) | EnvironmentService.RunProcess .Result deadlock → async, InstallerService sync WaitForExit → async |
+| 🟠 Architecture (6) | 7 ViewModels support constructor injection (optional param + Instance fallback), MainViewModel caches resolved ViewModels, MCPService Process.Exited leak fix, silent catch blocks now log Debug.WriteLine, async void handlers wrapped in try/catch, ConfigFileService.TryReadJSON added |
+| 🟡 Quality (5) | SharedHelpers extracted (CapitalizeWords, EnumerateJsonObject), xUnit test project with 92 tests, unused usings removed, ConfigFileType equality tests, SkillRepositoryService frontmatter parsing tests |
+
+### v1.1.1 – npm Detection Fix
+
+- `.cmd`/`.bat` files now run via `cmd.exe /c` explicitly (matching InstallerService.RunCommandAsync pattern)
+- `CancellationTokenSource` → `Task.WhenAny + Task.Delay` (eliminates cancellation races)
+- `FindInPathAsync` adds `.cmd`/`.exe` extension fallback + `where npm.cmd` retry
 
 ---
 
@@ -58,7 +63,7 @@ ClaudeCodePanel.Windows/
 ├── ClaudeConsole-Portable.zip          ← latest portable build
 ├── release/ClaudeConsole.exe           ← latest self-contained single-file exe
 └── src/ClaudeCodePanel.Windows/
-    ├── ClaudeCodePanel.Windows.csproj  ← net9.0-windows, AssemblyName=ClaudeConsole, Version=1.1.0
+    ├── ClaudeCodePanel.Windows.csproj  ← net9.0-windows, AssemblyName=ClaudeConsole, Version=1.1.1
     ├── App.xaml / App.xaml.cs          ← DI container, global exception handlers, lifecycle
     ├── Models/
     │   ├── APIProvider.cs              ← Anthropic/OpenAI/DeepSeek/Custom enum + extensions
@@ -116,7 +121,9 @@ ClaudeCodePanel.Windows/
 
 ## Architecture Notes
 
-- **Singleton services** use `private constructor` + `public static Instance { get; } = new()`, registered via `services.AddSingleton(Service.Instance)`
+- **Singleton services** use `private constructor` + `public static Instance { get; } = new()`
+- **ViewModels** accept optional constructor injection (`service ?? Service.Instance` fallback), enabling unit testing
+- **InternalsVisibleTo** set on main project so test project can access `internal` members
 - **ViewModels** use CommunityToolkit.Mvvm `[ObservableProperty]` and `[RelayCommand]` source generators
 - **MainWindow** receives `MainViewModel` via constructor injection (not Service Locator)
 - **API config** reads Claude Code's `env.*` keys from settings.json via SyncService
@@ -129,8 +136,8 @@ ClaudeCodePanel.Windows/
 
 ```
 Startup → CheckForUpdateAsync()
-  → GET api.github.com/repos/Lyxxxx718/ClaudeConsole/releases/latest
-  → Compare tag_name vs. hardcoded Version(1,0,0)
+  → GET api.github.com/repos/RRRadiant/ClaudeConsole/releases/latest
+  → Compare tag_name vs. hardcoded Version(1,1,1)
   → Newer? Show blue banner + "发现 vX.Y.Z" in sidebar
   → User clicks → browser opens release page
   → Sidebar button → manual re-check
@@ -139,9 +146,9 @@ Startup → CheckForUpdateAsync()
 ## GitHub Release
 
 - **Repo:** https://github.com/RRRadiant/ClaudeConsole
-- **Release tag format:** `v1.0.0` (semver, optional `v` prefix)
-- **Upload:** `release/ClaudeConsole.exe`
-- **UpdateService.cs line 22:** bump `CurrentVersion` constant when releasing new version
+- **Release tag format:** `v1.1.1` (semver, optional `v` prefix)
+- **Upload:** `release/ClaudeConsole.exe` + `ClaudeConsole-Portable.zip`
+- **UpdateService.cs line 25:** bump `CurrentVersion` constant when releasing new version
 
 ## Publishing
 
