@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace ClaudeCodePanel.Windows.Services;
@@ -43,17 +42,35 @@ public sealed class EnvironmentService
 
     /// <summary>
     /// Runs a process, drains stdout/stderr asynchronously, and returns (exitCode, stdout).
-    /// Uses WaitForExitAsync to avoid deadlocks — stdout/stderr are read concurrently.
+    /// Uses cmd.exe /c wrapper for .cmd/.bat files to ensure reliable execution across
+    /// Windows versions, matching the proven pattern in InstallerService.RunCommandAsync.
     /// </summary>
     private static async Task<(int exitCode, string stdout, string stderr)> RunProcessAsync(
         string fileName, string arguments, int timeoutMs = 5000)
     {
         try
         {
+            string actualFileName;
+            string actualArguments;
+
+            // .cmd / .bat files must run via cmd.exe /c when UseShellExecute=false
+            // to avoid per-version quirks in Process.Start's internal handling.
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            if (ext == ".cmd" || ext == ".bat")
+            {
+                actualFileName = "cmd.exe";
+                actualArguments = $"/c \"{fileName}\" {arguments}";
+            }
+            else
+            {
+                actualFileName = fileName;
+                actualArguments = arguments;
+            }
+
             var psi = new ProcessStartInfo
             {
-                FileName = fileName,
-                Arguments = arguments,
+                FileName = actualFileName,
+                Arguments = actualArguments,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -68,16 +85,20 @@ public sealed class EnvironmentService
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();
 
-            using var cts = new CancellationTokenSource(timeoutMs);
-            try
-            {
-                await process.WaitForExitAsync(cts.Token);
-            }
-            catch (OperationCanceledException)
+            // Use Task.WhenAny with a delay for timeout, avoiding CancellationTokenSource
+            // disposal races that can occur with WaitForExitAsync(CancellationToken).
+            var exitTask = process.WaitForExitAsync();
+            var delayTask = Task.Delay(timeoutMs);
+
+            var completed = await Task.WhenAny(exitTask, delayTask);
+            if (completed == delayTask)
             {
                 try { process.Kill(); } catch { }
                 return (-1, "", "Timeout");
             }
+
+            // Ensure exitTask is observed (it should already be complete)
+            await exitTask;
 
             var stdout = await stdoutTask;
             var stderr = await stderrTask;
@@ -92,15 +113,39 @@ public sealed class EnvironmentService
 
     /// <summary>
     /// Finds the first path for a command using 'where', or null if not in PATH.
+    /// Falls back to .cmd/.exe variants when 'where' returns a path without extension
+    /// (common for npm/node on some Windows installations).
     /// </summary>
     private static async Task<string?> FindInPathAsync(string cmd)
     {
+        // Primary: 'where cmd'
         var (exitCode, stdout, _) = await RunProcessAsync("where", cmd);
         if (exitCode == 0 && !string.IsNullOrWhiteSpace(stdout))
         {
-            // 'where' returns one path per line; take the first one
-            return stdout.Split('\n')[0].Trim();
+            var path = stdout.Split('\n')[0].Trim();
+
+            // Direct match
+            if (File.Exists(path))
+                return path;
+
+            // 'where npm' sometimes returns the bare name on some systems;
+            // try .cmd / .exe variants
+            foreach (var ext in new[] { ".cmd", ".exe" })
+            {
+                if (File.Exists(path + ext))
+                    return path + ext;
+            }
         }
+
+        // Fallback: 'where cmd.cmd' (some shells need explicit extension)
+        var (exitCode2, stdout2, _) = await RunProcessAsync("where", $"{cmd}.cmd");
+        if (exitCode2 == 0 && !string.IsNullOrWhiteSpace(stdout2))
+        {
+            var path = stdout2.Split('\n')[0].Trim();
+            if (File.Exists(path))
+                return path;
+        }
+
         return null;
     }
 

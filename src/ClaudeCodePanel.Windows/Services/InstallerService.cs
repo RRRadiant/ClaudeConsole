@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace ClaudeCodePanel.Windows.Services;
@@ -86,17 +85,32 @@ public sealed class InstallerService
     }
 
     /// <summary>
-    /// Runs a quick process synchronously-read (small output), drains stdout,
-    /// and returns trimmed output. Uses WaitForExitAsync to avoid deadlocks.
+    /// Runs a quick process, drains stdout asynchronously, and returns trimmed output.
+    /// Uses cmd.exe /c wrapper for .cmd/.bat files for consistency with RunCommandAsync.
     /// </summary>
     private static async Task<string?> RunQuickProcessAsync(string fileName, string arguments, int timeoutMs = 5000)
     {
         try
         {
+            string actualFileName;
+            string actualArguments;
+
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+            if (ext == ".cmd" || ext == ".bat")
+            {
+                actualFileName = "cmd.exe";
+                actualArguments = $"/c \"{fileName}\" {arguments}";
+            }
+            else
+            {
+                actualFileName = fileName;
+                actualArguments = arguments;
+            }
+
             var psi = new ProcessStartInfo
             {
-                FileName = fileName,
-                Arguments = arguments,
+                FileName = actualFileName,
+                Arguments = actualArguments,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -106,10 +120,17 @@ public sealed class InstallerService
             if (p == null) return null;
 
             var stdoutTask = p.StandardOutput.ReadToEndAsync();
-            using var cts = new CancellationTokenSource(timeoutMs);
-            try { await p.WaitForExitAsync(cts.Token); }
-            catch (OperationCanceledException) { try { p.Kill(); } catch { } return null; }
+            var exitTask = p.WaitForExitAsync();
+            var delayTask = Task.Delay(timeoutMs);
 
+            var completed = await Task.WhenAny(exitTask, delayTask);
+            if (completed == delayTask)
+            {
+                try { p.Kill(); } catch { }
+                return null;
+            }
+
+            await exitTask;
             var stdout = await stdoutTask;
             return stdout.Trim();
         }
@@ -144,17 +165,17 @@ public sealed class InstallerService
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();
 
-            using var cts = new CancellationTokenSource(timeoutMs);
-            try
-            {
-                await process.WaitForExitAsync(cts.Token);
-            }
-            catch (OperationCanceledException)
+            var exitTask = process.WaitForExitAsync();
+            var delayTask = Task.Delay(timeoutMs);
+
+            var completed = await Task.WhenAny(exitTask, delayTask);
+            if (completed == delayTask)
             {
                 try { process.Kill(); } catch { }
                 return new InstallResult { Success = false, Error = "超时" };
             }
 
+            await exitTask;
             var stdout = await stdoutTask;
             var stderr = await stderrTask;
 
