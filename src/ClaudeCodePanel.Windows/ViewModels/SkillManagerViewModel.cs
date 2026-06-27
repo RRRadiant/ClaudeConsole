@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Models;
 using ClaudeCodePanel.Windows.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,16 +20,16 @@ public partial class SkillManagerViewModel : ObservableObject
 {
     // ── Services ──────────────────────────────────────────────────
 
-    private readonly SkillRepositoryService _skillRepo;
-    private readonly SyncService _syncService;
-    private readonly ConfigFileService _configFileService;
+    private readonly ISkillRepositoryService _skillRepo;
+    private readonly ISyncService _syncService;
+    private readonly IConfigFileService _configFileService;
 
     // ── Constructor ───────────────────────────────────────────────
 
     public SkillManagerViewModel(
-        SkillRepositoryService? skillRepositoryService = null,
+        ISkillRepositoryService? skillRepositoryService = null,
         SyncService? syncService = null,
-        ConfigFileService? configFileService = null)
+        IConfigFileService? configFileService = null)
     {
         _skillRepo = skillRepositoryService ?? SkillRepositoryService.Instance;
         _syncService = syncService ?? SyncService.Instance;
@@ -296,7 +296,7 @@ public partial class SkillManagerViewModel : ObservableObject
                     skills.Add(new SkillItem
                     {
                         Id = id,
-                        Name = CapitalizeWords(id.Replace("-", " ")),
+                        Name = SharedHelpers.CapitalizeWords(id.Replace("-", " ")),
                         Description = isOnDisk
                             ? "已安装"
                             : "配置中引用 (未下载)",
@@ -436,27 +436,4 @@ public partial class SkillManagerViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Re-queries the marketplace (convenience wrapper around
-    /// <see cref="LoadMarketplaceSkillsAsync"/>).
-    /// </summary>
-    public async Task SearchMarketplaceAsync()
-    {
-        await LoadMarketplaceSkillsAsync();
-    }
-
-    // ── Private helpers ───────────────────────────────────────────
-
-    /// <summary>
-    /// Converts a dash-separated id into a title-cased display name.
-    /// E.g. "my-awesome-skill" becomes "My Awesome Skill".
-    /// </summary>
-    private static string CapitalizeWords(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-            return input;
-
-        return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(
-            input.ToLowerInvariant());
-    }
 }

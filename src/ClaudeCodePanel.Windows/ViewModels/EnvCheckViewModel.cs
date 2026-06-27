@@ -16,7 +16,7 @@ namespace ClaudeCodePanel.Windows.ViewModels;
 /// </summary>
 public partial class EnvCheckViewModel : ObservableObject
 {
-    private readonly EnvironmentService _env;
+    private readonly IEnvironmentService _env;
 
     // ── Observable properties ──────────────────────────────
 
@@ -71,7 +71,7 @@ public partial class EnvCheckViewModel : ObservableObject
 
     // ── Constructor ────────────────────────────────────────
 
-    public EnvCheckViewModel(EnvironmentService? environmentService = null)
+    public EnvCheckViewModel(IEnvironmentService? environmentService = null)
     {
         _env = environmentService ?? EnvironmentService.Instance;
         _ = CheckAsync().ContinueWith(t =>

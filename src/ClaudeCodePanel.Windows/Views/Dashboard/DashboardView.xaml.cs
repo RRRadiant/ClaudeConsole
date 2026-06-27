@@ -1,16 +1,26 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
+using ClaudeCodePanel.Windows.Models;
 using ClaudeCodePanel.Windows.ViewModels;
-using ClaudeCodePanel.Windows.Views.Shared;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ClaudeCodePanel.Windows.Views.Dashboard;
 
 public partial class DashboardView : UserControl
 {
     private DashboardViewModel? _vm;
-    private StatusIndicator? _apiStatus;
+    private bool _isLoaded;
+    private bool _hasAnimatedEvents;
+
+    // Progress bar animation targets (percentage 0-100)
+    private const double ProgressBarMaxWidth = 200; // will be overridden by actual available width
 
     public DashboardView()
     {
@@ -18,20 +28,16 @@ public partial class DashboardView : UserControl
         Loaded += OnLoadedAsync;
     }
 
-    private void OnApiStatusLoaded(object sender, RoutedEventArgs e)
-    {
-        _apiStatus = sender as StatusIndicator;
-    }
-
     private async void OnLoadedAsync(object sender, RoutedEventArgs e)
     {
-        // Guard against multiple Loaded firings (e.g. tab switches)
-        Loaded -= OnLoadedAsync;
+        if (_isLoaded) return;
+        _isLoaded = true;
 
         _vm = App.Services.GetService(typeof(DashboardViewModel)) as DashboardViewModel;
         if (_vm == null) return;
 
         DataContext = _vm;
+
         try
         {
             await _vm.LoadSummaryAsync();
@@ -41,41 +47,213 @@ public partial class DashboardView : UserControl
             Debug.WriteLine($"[DashboardView] LoadSummaryAsync failed: {ex.Message}");
         }
 
-        ApplyStatus();
+        ApplyCardData();
+        AnimateProgressBars();
 
-        // React to future summary changes (e.g. external sync updates)
+        // React to future summary changes
         _vm.PropertyChanged += (_, args) =>
         {
-            Dispatcher.Invoke(ApplyStatus);
+            Dispatcher.Invoke(() =>
+            {
+                ApplyCardData();
+                AnimateProgressBars();
+                RefreshEventsList();
+            });
         };
+
+        RefreshEventsList();
     }
 
-    private void ApplyStatus()
+    /// <summary>Fills card values from the ViewModel summary.</summary>
+    private void ApplyCardData()
     {
-        if (_vm == null) return;
+        if (_vm?.Summary == null) return;
 
-        // -- Claude version indicator --
-        if (_vm.Summary.IsClaudeInstalled)
+        var s = _vm.Summary;
+
+        // ── Card 1: Claude CLI ──
+        ClaudeStatusDot.Fill = s.IsClaudeInstalled
+            ? (Brush)FindResource("StatusSuccessBrush")
+            : (Brush)FindResource("StatusErrorBrush");
+
+        ClaudeValueText.Text = s.IsClaudeInstalled
+            ? s.ClaudeVersion
+            : "未安装";
+
+        // ── Card 2: API ──
+        ApiStatusDot.Fill = s.ApiConnected
+            ? (Brush)FindResource("StatusSuccessBrush")
+            : (Brush)FindResource("StatusErrorBrush");
+
+        ApiValueText.Text = s.ApiConnected
+            ? s.ApiProvider
+            : "未配置";
+
+        // ── Card 3: Skills ──
+        SkillsStatusDot.Fill = s.InstalledSkillsCount > 0
+            ? (Brush)FindResource("StatusSuccessBrush")
+            : (Brush)FindResource("TextTertiaryBrush");
+
+        SkillsValueText.Text = s.InstalledSkillsCount.ToString();
+
+        // ── Card 4: MCP ──
+        McpStatusDot.Fill = s.ActiveMCPServersCount > 0
+            ? (Brush)FindResource("StatusSuccessBrush")
+            : (Brush)FindResource("TextTertiaryBrush");
+
+        McpValueText.Text = $"{s.ActiveMCPServersCount}/{s.TotalMCPServersCount}";
+    }
+
+    /// <summary>Animates each card's progress bar from 0 to target width (800 ms ease-out).</summary>
+    private void AnimateProgressBars()
+    {
+        if (_vm?.Summary == null) return;
+
+        var s = _vm.Summary;
+
+        // Determine a reasonable max width based on the card's content area
+        double maxWidth = ActualWidth > 0 ? (ActualWidth - 96) / 2 - 40 : 200;
+
+        AnimateBar(ClaudeProgressBar, s.IsClaudeInstalled ? 100 : 0, maxWidth);
+        AnimateBar(ApiProgressBar, s.ApiConnected ? 100 : 0, maxWidth);
+        AnimateBar(SkillsProgressBar, Math.Min(s.InstalledSkillsCount * 10, 100), maxWidth);
+        AnimateBar(McpProgressBar,
+            s.TotalMCPServersCount > 0
+                ? (double)s.ActiveMCPServersCount / s.TotalMCPServersCount * 100
+                : 0,
+            maxWidth);
+    }
+
+    private static void AnimateBar(Rectangle bar, double percent, double maxWidth)
+    {
+        if (bar == null) return;
+
+        double targetWidth = maxWidth * (percent / 100.0);
+
+        var sb = new Storyboard();
+        var anim = new DoubleAnimation(0, targetWidth, TimeSpan.FromMilliseconds(800))
         {
-            ClaudeStatus.Status = "Running";
-            ClaudeStatus.Label = _vm.Summary.ClaudeVersion;
-        }
-        else
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(anim, bar);
+        Storyboard.SetTargetProperty(anim, new PropertyPath(Rectangle.WidthProperty));
+        sb.Children.Add(anim);
+        sb.Begin();
+    }
+
+    /// <summary>Rebinds the events list and triggers staggered entrance animation.</summary>
+    private void RefreshEventsList()
+    {
+        if (_vm?.Summary?.RecentEvents == null) return;
+
+        var events = _vm.Summary.RecentEvents;
+
+        // Toggle empty state vs. list
+        if (events.Count == 0)
         {
-            ClaudeStatus.Status = "Stopped";
-            ClaudeStatus.Label = "未安装";
+            EventsItemsControl.Visibility = Visibility.Collapsed;
+            EventsEmptyState.Visibility = Visibility.Visible;
+            return;
         }
 
-        // -- API connection indicator --
-        if (_vm.Summary.ApiConnected)
+        EventsEmptyState.Visibility = Visibility.Collapsed;
+        EventsItemsControl.Visibility = Visibility.Visible;
+
+        // Bind items
+        EventsItemsControl.ItemsSource = null;
+        EventsItemsControl.ItemsSource = events;
+
+        // Trigger staggered entrance after items are generated
+        Dispatcher.BeginInvoke(new Action(PlayEventStaggeredEntrance),
+            System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// Staggered slide-in entrance for event list items:
+    /// each item Y +10→0, opacity 0→1, 50 ms delay increments, 300 ms ease-out.
+    /// Also applies breathing pulse to each status dot.
+    /// </summary>
+    private void PlayEventStaggeredEntrance()
+    {
+        if (_hasAnimatedEvents) return;
+        if (_vm?.Summary?.RecentEvents == null || _vm.Summary.RecentEvents.Count == 0)
+            return;
+
+        _hasAnimatedEvents = true;
+
+        var items = _vm.Summary.RecentEvents;
+        var containers = new List<FrameworkElement>();
+
+        for (int i = 0; i < items.Count; i++)
         {
-            _apiStatus!.Status = "Running";
-            _apiStatus!.Label = "已连接";
+            var container = EventsItemsControl.ItemContainerGenerator.ContainerFromIndex(i);
+            if (container is FrameworkElement fe)
+                containers.Add(fe);
         }
-        else
+
+        for (int i = 0; i < containers.Count; i++)
         {
-            _apiStatus!.Status = "Stopped";
-            _apiStatus!.Label = "未配置";
+            var element = containers[i];
+            var delay = i * 50;
+
+            // Start state
+            element.RenderTransform = new TranslateTransform(0, 10);
+            element.Opacity = 0;
+
+            var sb = new Storyboard { BeginTime = TimeSpan.FromMilliseconds(delay) };
+
+            var slideIn = new DoubleAnimation(10, 0, TimeSpan.FromMilliseconds(300))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(slideIn, element);
+            Storyboard.SetTargetProperty(slideIn,
+                new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
+            sb.Children.Add(slideIn);
+
+            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(fadeIn, element);
+            Storyboard.SetTargetProperty(fadeIn, new PropertyPath(UIElement.OpacityProperty));
+            sb.Children.Add(fadeIn);
+
+            sb.Completed += (_, _) =>
+            {
+                element.RenderTransform = Transform.Identity;
+            };
+
+            sb.Begin();
+
+            // Apply breathing pulse to the status dot inside this container
+            ApplyBreathingPulse(element);
         }
+    }
+
+    /// <summary>Finds the Ellipse inside an event row and starts a breathing pulse animation.</summary>
+    private static void ApplyBreathingPulse(FrameworkElement container)
+    {
+        var dot = FindVisualChild<Ellipse>(container);
+        if (dot == null) return;
+
+        var sb = new Storyboard { RepeatBehavior = RepeatBehavior.Forever, AutoReverse = true };
+        var pulse = new DoubleAnimation(0.4, 1.0, TimeSpan.FromSeconds(2));
+        Storyboard.SetTarget(pulse, dot);
+        Storyboard.SetTargetProperty(pulse, new PropertyPath(UIElement.OpacityProperty));
+        sb.Children.Add(pulse);
+        sb.Begin();
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T found) return found;
+            var descendant = FindVisualChild<T>(child);
+            if (descendant != null) return descendant;
+        }
+        return null;
     }
 }

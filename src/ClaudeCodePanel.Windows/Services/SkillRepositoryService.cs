@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -9,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Models;
 
 namespace ClaudeCodePanel.Windows.Services;
@@ -78,19 +78,13 @@ public sealed class SkillRepoException : Exception
 
 // ─── Service ─────────────────────────────────────────────
 
-public sealed class SkillRepositoryService
+public sealed class SkillRepositoryService : ISkillRepositoryService
 {
     public static SkillRepositoryService Instance { get; } = new();
 
     private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(3600);
 
-    private readonly HttpClient _httpClient;
-
-    private SkillRepositoryService()
-    {
-        _httpClient = new HttpClient();
-        _httpClient.Timeout = TimeSpan.FromSeconds(15);
-    }
+    private SkillRepositoryService() { }
 
     private static ConfigFileService Config => ConfigFileService.Instance;
 
@@ -143,7 +137,7 @@ public sealed class SkillRepositoryService
                         new ProductInfoHeaderValue("ClaudeConsole", "1.0"));
 
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                    using var response = await _httpClient.SendAsync(request, cts.Token).ConfigureAwait(false);
+                    using var response = await HttpClientFactory.Create().SendAsync(request, cts.Token).ConfigureAwait(false);
                     if (response.IsSuccessStatusCode)
                     {
                         var json = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
@@ -151,7 +145,10 @@ public sealed class SkillRepositoryService
                         if (items != null) break;
                     }
                 }
-                catch { /* try next mirror */ }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[SkillRepositoryService] GitHub API mirror {apiUrl} failed: {ex.Message}");
+                }
             }
 
             if (items == null)
@@ -171,12 +168,13 @@ public sealed class SkillRepositoryService
                     var skill = await FetchSkillMetadataAsync(dir.Name).ConfigureAwait(false);
                     lock (skills) { skills.Add(skill); }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Debug.WriteLine($"[SkillRepositoryService] FetchSkillMetadataAsync for '{dir.Name}' failed: {ex.Message}");
                     var skill = new SkillItem
                     {
                         Id = dir.Name,
-                        Name = CapitalizeWords(dir.Name.Replace("-", " ")),
+                        Name = SharedHelpers.CapitalizeWords(dir.Name.Replace("-", " ")),
                         Description = "",
                         Source = SkillSource.Marketplace,
                         IsInstalled = IsSkillInstalled(dir.Name)
@@ -223,7 +221,7 @@ public sealed class SkillRepositoryService
         return ids.Select(id => new SkillItem
         {
             Id = id,
-            Name = CapitalizeWords(id.Replace("-", " ")),
+            Name = SharedHelpers.CapitalizeWords(id.Replace("-", " ")),
             Description = "Claude Code 官方技能",
             Source = SkillSource.Marketplace,
             IsInstalled = IsSkillInstalled(id)
@@ -249,13 +247,13 @@ public sealed class SkillRepositoryService
             try
             {
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
-                content = await _httpClient.GetStringAsync(url, cts.Token).ConfigureAwait(false);
+                content = await HttpClientFactory.Create().GetStringAsync(url, cts.Token).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(content))
                     break;
             }
-            catch
+            catch (Exception ex)
             {
-                // Try next mirror
+                Debug.WriteLine($"[SkillRepositoryService] SKILL.md fetch mirror {url} failed: {ex.Message}");
             }
         }
 
@@ -265,7 +263,7 @@ public sealed class SkillRepositoryService
             return new SkillItem
             {
                 Id = skillId,
-                Name = CapitalizeWords(skillId.Replace("-", " ")),
+                Name = SharedHelpers.CapitalizeWords(skillId.Replace("-", " ")),
                 Description = "",
                 Source = SkillSource.Marketplace,
                 IsInstalled = IsSkillInstalled(skillId)
@@ -279,7 +277,7 @@ public sealed class SkillRepositoryService
             Id = skillId,
             Name = !string.IsNullOrWhiteSpace(name)
                 ? name
-                : CapitalizeWords(skillId.Replace("-", " ")),
+                : SharedHelpers.CapitalizeWords(skillId.Replace("-", " ")),
             Description = description ?? "",
             Source = SkillSource.Marketplace,
             IsInstalled = IsSkillInstalled(skillId)
@@ -458,49 +456,7 @@ public sealed class SkillRepositoryService
         {
             Config.EnsureDirectoryExists(Path.GetDirectoryName(targetDir)!);
 
-            // Shallow clone with blobless filter for speed
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
-            };
-
-            process.StartInfo.ArgumentList.Add("clone");
-            process.StartInfo.ArgumentList.Add("--depth=1");
-            process.StartInfo.ArgumentList.Add("--filter=blob:none");
-            process.StartInfo.ArgumentList.Add(officialRepo);
-            process.StartInfo.ArgumentList.Add(tempDir);
-
-            process.Start();
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
-            {
-                var error = process.StandardError.ReadToEnd().Trim();
-                throw new SkillRepoException(
-                    string.IsNullOrEmpty(error)
-                        ? $"git clone failed with exit code {process.ExitCode}"
-                        : $"git clone failed: {error}");
-            }
-
-            var skillSourceDir = Path.Combine(tempDir, "skills", id);
-            if (!Directory.Exists(skillSourceDir))
-            {
-                throw new SkillRepoException(
-                    $"Skill '{id}' not found in the official Claude Code repository");
-            }
-
-            // Remove existing installation if present
-            if (Directory.Exists(targetDir))
-                Directory.Delete(targetDir, recursive: true);
-
-            CopyDirectoryRecursive(skillSourceDir, targetDir);
+            InstallFromMarketplaceAsync(id, targetDir, officialRepo, tempDir).GetAwaiter().GetResult();
         }
         catch (SkillRepoException)
         {
@@ -518,10 +474,72 @@ public sealed class SkillRepositoryService
                 if (Directory.Exists(tempDir))
                     Directory.Delete(tempDir, recursive: true);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort cleanup
+                Debug.WriteLine($"[SkillRepositoryService] Temp directory cleanup failed: {ex.Message}");
             }
+        }
+    }
+
+    private async Task InstallFromMarketplaceAsync(string id, string targetDir, string officialRepo, string tempDir)
+    {
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "git",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            }
+        };
+
+        process.StartInfo.ArgumentList.Add("clone");
+        process.StartInfo.ArgumentList.Add("--depth=1");
+        process.StartInfo.ArgumentList.Add("--filter=blob:none");
+        process.StartInfo.ArgumentList.Add(officialRepo);
+        process.StartInfo.ArgumentList.Add(tempDir);
+
+        try
+        {
+            process.Start();
+            var timeoutTask = Task.Delay(TimeSpan.FromMinutes(3));
+            var exitTask = process.WaitForExitAsync();
+            var completed = await Task.WhenAny(exitTask, timeoutTask);
+
+            if (completed == timeoutTask)
+            {
+                try { process.Kill(); } catch (Exception ex) { SharedHelpers.SafeLog("SkillRepositoryService.InstallFromMarketplaceAsync.Kill", ex); }
+                throw new SkillRepoException("git clone timed out after 3 minutes");
+            }
+
+            await exitTask;
+
+            if (process.ExitCode != 0)
+            {
+                var error = (await process.StandardError.ReadToEndAsync()).Trim();
+                throw new SkillRepoException(
+                    string.IsNullOrEmpty(error)
+                        ? $"git clone failed with exit code {process.ExitCode}"
+                        : $"git clone failed: {error}");
+            }
+
+            var skillSourceDir = Path.Combine(tempDir, "skills", id);
+            if (!Directory.Exists(skillSourceDir))
+            {
+                throw new SkillRepoException(
+                    $"Skill '{id}' not found in the official Claude Code repository");
+            }
+
+            if (Directory.Exists(targetDir))
+                Directory.Delete(targetDir, recursive: true);
+
+            CopyDirectoryRecursive(skillSourceDir, targetDir);
+        }
+        finally
+        {
+            process.Dispose();
         }
     }
 
@@ -561,7 +579,7 @@ public sealed class SkillRepositoryService
                 return new SkillItem
                 {
                     Id = id,
-                    Name = CapitalizeWords(id.Replace("-", " ")),
+                    Name = SharedHelpers.CapitalizeWords(id.Replace("-", " ")),
                     Description = "",
                     Source = SkillSource.Marketplace,
                     IsInstalled = true,
@@ -584,14 +602,6 @@ public sealed class SkillRepositoryService
     }
 
     // ── Helpers ───────────────────────────────────────────
-
-    private static string CapitalizeWords(string input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-            return input;
-
-        return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLowerInvariant());
-    }
 
     private static void CopyDirectoryRecursive(string sourceDir, string targetDir)
     {
@@ -624,8 +634,9 @@ public sealed class SkillRepositoryService
             var cache = JsonSerializer.Deserialize<SkillCacheRecord>(json);
             return cache;
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[SkillRepositoryService] LoadCache failed: {ex.Message}");
             return null;
         }
     }
@@ -652,9 +663,9 @@ public sealed class SkillRepositoryService
 
             File.WriteAllText(path, json);
         }
-        catch
+        catch (Exception ex)
         {
-            // Cache write failures are non-fatal; silently ignored
+            Debug.WriteLine($"[SkillRepositoryService] SaveCache failed: {ex.Message}");
         }
     }
 }

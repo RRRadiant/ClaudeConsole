@@ -3,15 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared">
 
-    <Border Background="#80000000"
+    <Border Background="{DynamicResource DialogDimmingBrush}"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
 
         <Border HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 CornerRadius="16"
-                Background="{StaticResource OverlayBackgroundBrush}"
-                BorderBrush="{StaticResource BorderStrongBrush}"
+                Background="{DynamicResource OverlayBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderStrongBrush}"
                 BorderThickness="1"
                 Padding="28"
                 Width="500">
@@ -19,7 +19,7 @@
                 <TextBlock Text="安装技能"
                            FontSize="26"
                            FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            Margin="0,0,0,20"/>
 
                 <!-- Source picker tabs -->
@@ -32,7 +32,7 @@
                                   IsChecked="True">
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
-                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                                 <Setter Property="Foreground" Value="White"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
@@ -46,7 +46,7 @@
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsChecked" Value="False">
                                                     <Setter TargetName="border" Property="Background" Value="Transparent"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -66,7 +66,7 @@
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
                                 <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ToggleButton">
@@ -78,7 +78,7 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsChecked" Value="True">
-                                                    <Setter TargetName="border" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                                     <Setter Property="Foreground" Value="White"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
@@ -102,7 +102,7 @@
                             Cursor="Hand"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
                             Padding="16,10">
                         <TextBlock Text="取消" FontSize="15"/>
                     </Button>
@@ -111,14 +111,14 @@
                             Click="OnInstallClick"
                             Cursor="Hand"
                             Margin="12,0,0,0"
-                            Background="{StaticResource AccentBrush}"
+                            Background="{DynamicResource AccentBrush}"
                             BorderThickness="0"
                             Foreground="White"
                             Padding="22,10">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="22"/>
-                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                             </Style>
                         </Button.Resources>
                         <StackPanel Orientation="Horizontal">

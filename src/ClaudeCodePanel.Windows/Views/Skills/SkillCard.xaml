@@ -25,18 +25,18 @@
                            Text="&#xE94A;"
                            FontFamily="Segoe MDL2 Assets"
                            FontSize="22"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Margin="12,0,0,0"
                             VerticalAlignment="Center">
                     <TextBlock x:Name="InstalledName"
                                FontSize="18" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                TextTrimming="CharacterEllipsis"/>
                     <TextBlock x:Name="InstalledDesc"
                                FontSize="14"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                MaxWidth="360"/>
                 </StackPanel>
@@ -49,7 +49,7 @@
                 <Button x:Name="MenuButton" Grid.Column="3"
                         Width="28" Height="28"
                         Background="Transparent" BorderThickness="0"
-                        Foreground="{StaticResource TextSecondaryBrush}" Cursor="Hand"
+                        Foreground="{DynamicResource TextSecondaryBrush}" Cursor="Hand"
                         VerticalAlignment="Center"
                         Visibility="Collapsed"
                         Click="OnMenuButtonClick">
@@ -57,13 +57,13 @@
                         <TextBlock Text="&#xE712;"
                                    FontFamily="Segoe MDL2 Assets"
                                    FontSize="15"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </Button.Content>
                     <Button.ContextMenu>
                         <ContextMenu x:Name="ActionMenu"
-                                     Background="{StaticResource OverlayBackgroundBrush}"
-                                     BorderBrush="{StaticResource BorderStrongBrush}"
-                                     Foreground="{StaticResource TextPrimaryBrush}">
+                                     Background="{DynamicResource OverlayBackgroundBrush}"
+                                     BorderBrush="{DynamicResource BorderStrongBrush}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}">
                             <MenuItem x:Name="ToggleMenuItem" Click="OnToggleClick">
                                 <MenuItem.Header>
                                     <StackPanel Orientation="Horizontal">
@@ -86,10 +86,10 @@
                                         <TextBlock FontFamily="Segoe MDL2 Assets"
                                                    FontSize="15"
                                                    Text="&#xE74D;"
-                                                   Foreground="{StaticResource StatusErrorBrush}"
+                                                   Foreground="{DynamicResource StatusErrorBrush}"
                                                    VerticalAlignment="Center"/>
                                         <TextBlock Text="删除"
-                                                   Foreground="{StaticResource StatusErrorBrush}"
+                                                   Foreground="{DynamicResource StatusErrorBrush}"
                                                    Margin="8,0,0,0"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
@@ -105,7 +105,7 @@
         <Border x:Name="MarketplaceRoot"
                 CornerRadius="24"
                 Background="Transparent"
-                BorderBrush="{StaticResource BorderDefaultBrush}"
+                BorderBrush="{DynamicResource BorderDefaultBrush}"
                 BorderThickness="1"
                 Padding="20"
                 Visibility="Collapsed"
@@ -116,11 +116,11 @@
                     <TextBlock Text="&#xE94A;"
                                FontFamily="Segoe MDL2 Assets"
                                FontSize="15"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center"/>
                     <TextBlock x:Name="MarketplaceName"
                                FontSize="18" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                Margin="6,0,0,0"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"/>
@@ -135,14 +135,14 @@
                                VerticalAlignment="Center"/>
                     <TextBlock x:Name="StarsCount"
                                FontSize="13"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="4,0,0,0"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <TextBlock x:Name="MarketplaceDesc"
                            FontSize="14"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap"
                            TextTrimming="CharacterEllipsis"
                            MaxHeight="44"
@@ -157,7 +157,7 @@
                     <Button x:Name="InstallButton"
                             Click="OnInstallButtonClick"
                             Cursor="Hand"
-                            Background="{StaticResource AccentBrush}"
+                            Background="{DynamicResource AccentBrush}"
                             BorderThickness="0"
                             Foreground="White"
                             Padding="16,7"
@@ -165,7 +165,7 @@
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="22"/>
-                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                             </Style>
                         </Button.Resources>
                         <StackPanel Orientation="Horizontal">

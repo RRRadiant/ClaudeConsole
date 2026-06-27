@@ -30,7 +30,7 @@
                                 Visibility="Collapsed"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
                                 Cursor="Hand"
                                 Padding="4"
                                 Margin="8,0,0,0"
@@ -51,14 +51,14 @@
             <shared:GlassCard Margin="0,0,0,20">
                 <Expander x:Name="AdvancedExpander"
                           Header="高级选项"
-                          Foreground="{StaticResource TextPrimaryBrush}"
+                          Foreground="{DynamicResource TextPrimaryBrush}"
                           IsExpanded="False"
                           Expanded="OnAdvancedExpanded"
                           Collapsed="OnAdvancedCollapsed">
                     <StackPanel Margin="0,10,0,0">
                         <TextBlock Text="Base URL"
                                    FontSize="14"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,6"/>
                         <shared:GlassTextField x:Name="BaseUrlField"
                                                Variant="Compact"
@@ -75,7 +75,7 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="最大令牌数"
                                            FontSize="14"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,0,0,6"/>
                                 <shared:GlassTextField x:Name="MaxTokensField"
                                                        Variant="Compact"
@@ -85,7 +85,7 @@
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="超时 (秒)"
                                            FontSize="14"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
                                            Margin="0,0,0,6"/>
                                 <shared:GlassTextField x:Name="TimeoutField"
                                                        Variant="Compact"
@@ -103,19 +103,19 @@
                         <TextBlock Text="可用模型"
                                    FontSize="18"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    HorizontalAlignment="Left"/>
                         <TextBlock x:Name="EnabledModelCountLabel"
                                    Text="0 个已启用"
                                    FontSize="14"
-                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    HorizontalAlignment="Right"/>
                     </Grid>
 
                     <TextBlock x:Name="NoModelsHint"
                                Text="请从下方检测或手动添加模型"
                                FontSize="15"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="0,12,0,0"
                                Visibility="Visible"/>
 
@@ -138,7 +138,7 @@
                                 Cursor="Hand"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{StaticResource AccentBrush}"
+                                Foreground="{DynamicResource AccentBrush}"
                                 Padding="6,4">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE11A;"
@@ -156,7 +156,7 @@
                                 Visibility="Collapsed"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{StaticResource AccentBrush}"
+                                Foreground="{DynamicResource AccentBrush}"
                                 Padding="6,4"
                                 Margin="10,0,0,0">
                             <StackPanel Orientation="Horizontal">
@@ -175,7 +175,7 @@
                                 Visibility="Collapsed"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
                                 Padding="6,4"
                                 Margin="10,0,0,0">
                             <StackPanel Orientation="Horizontal">
@@ -191,7 +191,7 @@
 
                     <TextBlock x:Name="DetectionMsg"
                                FontSize="12"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="0,6,0,0"
                                TextWrapping="Wrap"/>
 
@@ -211,9 +211,9 @@
                         Click="OnTestConnection"
                         Cursor="Hand"
                         Background="Transparent"
-                        BorderBrush="{StaticResource BorderDefaultBrush}"
+                        BorderBrush="{DynamicResource BorderDefaultBrush}"
                         BorderThickness="1"
-                        Foreground="{StaticResource TextPrimaryBrush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
                         Padding="24,10"
                         Margin="0,0,14,0">
                     <Button.Resources>
@@ -235,14 +235,14 @@
                 <Button x:Name="SaveBtn"
                         Click="OnSaveConfig"
                         Cursor="Hand"
-                        Background="{StaticResource AccentBrush}"
+                        Background="{DynamicResource AccentBrush}"
                         BorderThickness="0"
                         Foreground="White"
                         Padding="24,10">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="22"/>
-                            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                         </Style>
                     </Button.Resources>
                     <StackPanel Orientation="Horizontal">

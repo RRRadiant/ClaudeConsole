@@ -9,7 +9,7 @@ namespace ClaudeCodePanel.Windows.Services;
 /// Uses P/Invoke to advapi32.dll (CredWriteW, CredReadW, CredDeleteW, CredFree)
 /// to store and retrieve generic credentials.
 /// </summary>
-public sealed class CredentialService
+public sealed class CredentialService : ICredentialService
 {
     public static CredentialService Instance { get; } = new();
 

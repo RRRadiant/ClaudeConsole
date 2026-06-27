@@ -2,15 +2,19 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared">
 
+    <!-- Easing functions for micro-interactions (must precede Style for StaticResource) -->
+    <CubicEase x:Key="EaseOutCubic" EasingMode="EaseOut"/>
+    <BackEase x:Key="EaseOutBack" EasingMode="EaseOut" Amplitude="0.3"/>
+
     <!-- ═══════════════════════════════════════════════════════════
          GlassCard — Liquid Glass panel control
          Matches .glass-panel / .glass-card from Claude-Win
 
          Variants:
-           "Default" — Standard glass panel (radius-xl=28px, blur simulation)
+           "Default" — Standard glass panel (radius-xl=32px, blur simulation)
            "Compact" — Compact card (radius-lg=20px)
            "Plain"   — No border, no hover, content only
-           "Aurora"  — Enhanced glass with stronger highlight
+           "Aurora"  — Enhanced glass with stronger highlight + accent glow
            "Signal"  — Blue-tinted status panel
          ═══════════════════════════════════════════════════════════ -->
 
@@ -18,18 +22,21 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type shared:GlassCard}">
-                    <!-- Outer border: carries corner radius, clips content, handles hover -->
+                    <!-- Outer border: carries corner radius, clips content, handles hover/press -->
                     <Border x:Name="OuterBorder"
                             CornerRadius="32"
-                            ClipToBounds="True">
+                            ClipToBounds="True"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="CardScale" ScaleX="1" ScaleY="1"/>
+                        </Border.RenderTransform>
 
-                        <!-- Inner border: provides the stroke -->
+                        <!-- Inner border: provides the stroke + background -->
                         <Border x:Name="StrokeBorder"
                                 CornerRadius="32"
                                 BorderThickness="1"
                                 ClipToBounds="True">
 
-                            <!-- Multi-layer background simulation -->
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                     <GradientStop Color="#08FFFFFF" Offset="0"/>
@@ -37,29 +44,83 @@
                                 </LinearGradientBrush>
                             </Border.Background>
 
-                            <!-- Content layout grid -->
-                            <Grid x:Name="LayoutGrid">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
+                            <!-- Wrapper grid to host both gloss layer and content -->
+                            <Grid>
+                                <!-- Top-left glossy arc highlight (glass sheen) -->
+                                <Border x:Name="GlossHighlight"
+                                        IsHitTestVisible="False"
+                                        VerticalAlignment="Top"
+                                        HorizontalAlignment="Left"
+                                        Width="80" Height="60"
+                                        CornerRadius="0,0,40,0"
+                                        Margin="-10,-10,0,0"
+                                        Opacity="0.3">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#15FFFFFF" Offset="0"/>
+                                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
 
-                                <!-- Title (optional) -->
-                                <TextBlock x:Name="TitleTextBlock"
-                                           Grid.Row="0"
-                                           FontWeight="SemiBold"
-                                           FontSize="18"
-                                           Foreground="{StaticResource TextPrimaryBrush}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,10"
-                                           Visibility="Collapsed"/>
+                                <!-- Content layout grid -->
+                                <Grid x:Name="LayoutGrid">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
 
-                                <!-- Content -->
-                                <ContentPresenter Grid.Row="1"
-                                                  ContentSource="Content"/>
+                                    <!-- Title (optional) -->
+                                    <TextBlock x:Name="TitleTextBlock"
+                                               Grid.Row="0"
+                                               FontWeight="SemiBold"
+                                               FontSize="18"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,10"
+                                               Visibility="Collapsed"/>
+
+                                    <!-- Content -->
+                                    <ContentPresenter Grid.Row="1"
+                                                      ContentSource="Content"/>
+                                </Grid>
                             </Grid>
                         </Border>
                     </Border>
+
+                    <ControlTemplate.Triggers>
+                        <!-- Pressed state: subtle scale-down -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="0.995" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource EaseOutCubic}"/>
+                                        <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="0.995" Duration="0:0:0.15"
+                                                         EasingFunction="{StaticResource EaseOutCubic}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1.0" Duration="0:0:0.2"
+                                                         EasingFunction="{StaticResource EaseOutBack}"/>
+                                        <DoubleAnimation Storyboard.TargetName="CardScale"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1.0" Duration="0:0:0.2"
+                                                         EasingFunction="{StaticResource EaseOutBack}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

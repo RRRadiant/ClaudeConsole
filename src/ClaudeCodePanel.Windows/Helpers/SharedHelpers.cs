@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 
@@ -52,5 +54,15 @@ public static class SharedHelpers
                 dict[prop.Name] = str;
         }
         return dict;
+    }
+
+    /// <summary>
+    /// Conditionally logs to Debug.WriteLine — only compiled in DEBUG builds.
+    /// Format: "[context] message"
+    /// </summary>
+    [Conditional("DEBUG")]
+    public static void SafeLog(string context, Exception? ex = null, string? message = null)
+    {
+        Debug.WriteLine($"[{context}] {message ?? ex?.Message}");
     }
 }

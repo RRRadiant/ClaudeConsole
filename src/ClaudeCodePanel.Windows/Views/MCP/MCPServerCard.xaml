@@ -21,7 +21,7 @@
                            Grid.Column="0"
                            FontFamily="Segoe MDL2 Assets"
                            FontSize="18"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
 
                 <StackPanel x:Name="NamePanel" Grid.Column="1" Margin="12,0,0,0"
@@ -29,16 +29,16 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="EffectiveNameLabel"
                                    FontSize="18" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <TextBlock x:Name="OriginalNameHint"
                                    FontSize="12"
-                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    Margin="4,0,0,0"
                                    Visibility="Collapsed"/>
                     </StackPanel>
                     <TextBlock x:Name="ProjectPathLabel"
                                FontSize="12"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                Visibility="Collapsed"/>
                 </StackPanel>
@@ -53,7 +53,7 @@
                     <TextBlock x:Name="UntestedLabel"
                                Text="未测试"
                                FontSize="13"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                VerticalAlignment="Center"/>
                     <shared:StatusIndicator x:Name="ConnectionStatus"
                                            Visibility="Collapsed"
@@ -67,7 +67,7 @@
                         Cursor="Hand"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
                         Padding="0"
                         Visibility="Collapsed">
                     <TextBlock Text="&#xE712;"
@@ -84,8 +84,8 @@
                    PlacementTarget="{Binding ElementName=MenuButton}"
                    StaysOpen="False"
                    AllowsTransparency="True">
-                <Border Background="{StaticResource OverlayBackgroundBrush}"
-                        BorderBrush="{StaticResource BorderStrongBrush}"
+                <Border Background="{DynamicResource OverlayBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderStrongBrush}"
                         BorderThickness="1"
                         CornerRadius="12"
                         Padding="6"
@@ -96,7 +96,7 @@
                                 Cursor="Hand"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{StaticResource TextPrimaryBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
                                 Padding="12,8">
@@ -105,7 +105,7 @@
                                            FontFamily="Segoe MDL2 Assets"
                                            FontSize="15"
                                            Margin="0,0,8,0"
-                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 <TextBlock Text="测试连接" FontSize="15"/>
                             </StackPanel>
                         </Button>
@@ -114,7 +114,7 @@
                                 Cursor="Hand"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{StaticResource TextPrimaryBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
                                 Padding="12,8">
@@ -123,17 +123,17 @@
                                            FontFamily="Segoe MDL2 Assets"
                                            FontSize="15"
                                            Margin="0,0,8,0"
-                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 <TextBlock Text="编辑…" FontSize="15"/>
                             </StackPanel>
                         </Button>
-                        <Rectangle Height="1" Fill="{StaticResource BorderDividerBrush}" Margin="8,2"/>
+                        <Rectangle Height="1" Fill="{DynamicResource BorderDividerBrush}" Margin="8,2"/>
                         <Button x:Name="DeleteMenuBtn"
                                 Click="OnDeleteFromMenu"
                                 Cursor="Hand"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{StaticResource StatusErrorBrush}"
+                                Foreground="{DynamicResource StatusErrorBrush}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
                                 Padding="12,8">
@@ -161,11 +161,11 @@
                             Visibility="Collapsed"
                             Margin="0,0,0,4">
                     <TextBlock Text="项目:" FontSize="14"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBlock x:Name="ProjectDetailPath"
                                FontSize="13"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -175,11 +175,11 @@
                             Visibility="Collapsed"
                             Margin="0,0,0,2">
                     <TextBlock Text="URL:" FontSize="14"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBlock x:Name="SSEUrlLabel"
                                FontSize="13"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -189,31 +189,31 @@
                             Visibility="Collapsed"
                             Margin="0,0,0,2">
                     <TextBlock Text="命令:" FontSize="14"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBlock x:Name="StdioCommandLabel"
                                FontSize="13"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <TextBlock x:Name="StdioArgsLabel"
                            FontSize="13"
-                           Foreground="{StaticResource TextTertiaryBrush}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"
                            TextTrimming="CharacterEllipsis"
                            Visibility="Collapsed"
                            Margin="0,0,0,4"/>
 
                 <TextBlock x:Name="BuiltinPluginLabel"
                            FontSize="13"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            Visibility="Collapsed"
                            Margin="0,0,0,4"/>
 
                 <TextBlock x:Name="EnvCountLabel"
                            FontSize="13"
-                           Foreground="{StaticResource TextTertiaryBrush}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"
                            Visibility="Collapsed"
                            Margin="0,0,0,4"/>
 
@@ -227,15 +227,15 @@
                     <TextBlock Text="&#xE70F;"
                                FontFamily="Segoe MDL2 Assets"
                                FontSize="12"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,6,0"/>
                     <TextBox x:Name="RenameInput"
                              FontSize="15"
-                             Foreground="{StaticResource TextPrimaryBrush}"
-                             CaretBrush="{StaticResource AccentBrush}"
-                             Background="{StaticResource SelectionBackgroundBrush}"
-                             BorderBrush="{StaticResource BorderDefaultBrush}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             CaretBrush="{DynamicResource AccentBrush}"
+                             Background="{DynamicResource SelectionBackgroundBrush}"
+                             BorderBrush="{DynamicResource BorderDefaultBrush}"
                              BorderThickness="1"
                              Padding="6,3"
                              Width="180"
@@ -246,7 +246,7 @@
                             Cursor="Hand"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource AccentBrush}"
+                            Foreground="{DynamicResource AccentBrush}"
                             Padding="6,3"
                             Margin="4,0,0,0">
                         <TextBlock Text="完成" FontSize="12"/>
@@ -256,7 +256,7 @@
                             Cursor="Hand"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
                             Padding="4,3"
                             Margin="2,0,0,0">
                         <TextBlock Text="&#xE711;"
@@ -271,7 +271,7 @@
                         Cursor="Hand"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
                         HorizontalAlignment="Left"
                         Padding="0,4">
                     <StackPanel Orientation="Horizontal">
@@ -289,7 +289,7 @@
                         Cursor="Hand"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
                         HorizontalAlignment="Stretch"
                         Padding="0,4"
                         Margin="0,4,0,0">

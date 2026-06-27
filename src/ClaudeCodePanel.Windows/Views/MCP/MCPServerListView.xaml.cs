@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -141,20 +143,19 @@ public partial class MCPServerListView : UserControl
     /// Called by the editor when the user clicks Save.
     /// Persists the form data via the ViewModel and refreshes the card list.
     /// </summary>
-    private async void OnEditorSave(MCPManagerViewModel vm)
+    private void OnEditorSave(MCPManagerViewModel vm)
     {
         try
         {
-            await vm.SaveServerAsync();
+            vm.SaveServer();
             EditorView.Visibility = Visibility.Collapsed;
             EditorView.ClearFields();
             vm.ResetForm();
             RefreshServerCards();
         }
-        catch
+        catch (Exception ex)
         {
-            // Save errors are handled inside the ViewModel (ErrorMessage property).
-            // The editor stays open so the user can correct the form.
+            Debug.WriteLine($"[MCPServerListView] OnEditorSave failed: {ex.Message}");
         }
     }
 

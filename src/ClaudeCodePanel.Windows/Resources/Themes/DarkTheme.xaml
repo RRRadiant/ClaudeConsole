@@ -27,6 +27,14 @@
          Color Palette — Liquid Glass Design Tokens
          ═══════════════════════════════════════════════════════════ -->
 
+    <!-- Window Background Gradient — used by MainWindow BgBorder -->
+    <RadialGradientBrush x:Key="WindowBgBrush" Center="0.5,0" RadiusX="0.8" RadiusY="0.6">
+        <RadialGradientBrush.GradientStops>
+            <GradientStop Color="#0F1A38" Offset="0"/>
+            <GradientStop Color="#080D1F" Offset="1"/>
+        </RadialGradientBrush.GradientStops>
+    </RadialGradientBrush>
+
     <!-- Background Depth Layers (dark navy) -->
     <SolidColorBrush x:Key="Bg0Brush" Color="#080d1f"/>
     <SolidColorBrush x:Key="Bg1Brush" Color="#0f1a38"/>
@@ -36,9 +44,16 @@
     <!-- Window & Content Surfaces -->
     <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#080d1f"/>
     <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#0c0e18"/>
+    <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#800c0e18"/>
     <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#080d1f"/>
     <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="#0FFFFFFF"/>
     <SolidColorBrush x:Key="OverlayBackgroundBrush" Color="#141828"/>
+
+    <!-- Input & Editor Surface Colors -->
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#33000000"/>
+    <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#33000000"/>
+    <SolidColorBrush x:Key="DialogDimmingBrush" Color="#80000000"/>
+    <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#14FFFFFF"/>
 
     <!-- Glass Surfaces -->
     <SolidColorBrush x:Key="SurfaceBrush" Color="#0FFFFFFF"/>              <!-- rgba(255,255,255,0.06) -->
@@ -46,6 +61,8 @@
     <SolidColorBrush x:Key="SurfaceSoftBrush" Color="#08FFFFFF"/>          <!-- rgba(255,255,255,0.03) -->
     <SolidColorBrush x:Key="GlassCardBgBrush" Color="#0CFFFFFF"/>          <!-- card base -->
     <SolidColorBrush x:Key="GlassCardBgAltBrush" Color="#08FFFFFF"/>       <!-- card alt -->
+    <SolidColorBrush x:Key="GlassCardHoverBrush" Color="#12FFFFFF"/>       <!-- card hover state -->
+    <SolidColorBrush x:Key="GlassCardActiveBrush" Color="#06FFFFFF"/>      <!-- card active/pressed state -->
 
     <!-- Accent Colors -->
     <SolidColorBrush x:Key="AccentBrush" Color="#6faadd"/>
@@ -59,14 +76,20 @@
     <SolidColorBrush x:Key="TextTertiaryBrush" Color="#59FFFFFF"/>        <!-- rgba(255,255,255,0.35) -->
     <SolidColorBrush x:Key="TextMutedBrush" Color="#26FFFFFF"/>           <!-- rgba(255,255,255,0.15) -->
 
-    <!-- Status Colors -->
-    <SolidColorBrush x:Key="StatusRunningBrush" Color="#4ea88d"/>          <!-- success green -->
-    <SolidColorBrush x:Key="StatusStoppedBrush" Color="#59FFFFFF"/>        <!-- muted -->
-    <SolidColorBrush x:Key="StatusErrorBrush" Color="#cf6b6b"/>            <!-- danger red -->
-    <SolidColorBrush x:Key="StatusWarningBrush" Color="#d6a24a"/>          <!-- warning amber -->
-    <SolidColorBrush x:Key="StatusRunningBgBrush" Color="#144ea88d"/>
-    <SolidColorBrush x:Key="StatusErrorBgBrush" Color="#14cf6b6b"/>
-    <SolidColorBrush x:Key="StatusWarningBgBrush" Color="#14d6a24a"/>
+    <!-- Status Colors — WCAG AA compliant on dark background -->
+    <SolidColorBrush x:Key="StatusSuccessBrush" Color="#34d399"/>          <!-- green-400: contrast 8.2:1 -->
+    <SolidColorBrush x:Key="StatusWarningBrush" Color="#fbbf24"/>          <!-- amber-400: contrast 8.8:1 -->
+    <SolidColorBrush x:Key="StatusErrorBrush" Color="#f87171"/>            <!-- red-400: contrast 5.8:1 -->
+    <SolidColorBrush x:Key="StatusInfoBrush" Color="#60a5fa"/>             <!-- blue-400: contrast 5.9:1 -->
+    <SolidColorBrush x:Key="StatusSuccessBgBrush" Color="#1434d399"/>
+    <SolidColorBrush x:Key="StatusWarningBgBrush" Color="#14fbbf24"/>
+    <SolidColorBrush x:Key="StatusErrorBgBrush" Color="#14f87171"/>
+    <SolidColorBrush x:Key="StatusInfoBgBrush" Color="#1460a5fa"/>
+
+    <!-- Legacy status aliases (backward compat) -->
+    <SolidColorBrush x:Key="StatusRunningBrush" Color="#34d399"/>
+    <SolidColorBrush x:Key="StatusStoppedBrush" Color="#59FFFFFF"/>
+    <SolidColorBrush x:Key="StatusRunningBgBrush" Color="#1434d399"/>
 
     <!-- Border Colors -->
     <SolidColorBrush x:Key="BorderDefaultBrush" Color="#1AFFFFFF"/>        <!-- rgba(255,255,255,0.10) -->
@@ -81,13 +104,47 @@
     <SolidColorBrush x:Key="ScrollbarTrackBrush" Color="Transparent"/>
 
     <!-- ============================================================
+         Corner Radius Scale
+         ============================================================ -->
+    <CornerRadius x:Key="RadiusSm">4</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">6</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">8</CornerRadius>
+    <CornerRadius x:Key="RadiusXl">12</CornerRadius>
+    <CornerRadius x:Key="Radius2xl">16</CornerRadius>
+    <CornerRadius x:Key="Radius3xl">24</CornerRadius>
+    <CornerRadius x:Key="Radius4xl">32</CornerRadius>
+
+    <!-- ============================================================
+         Typography Scale
+         ============================================================ -->
+    <sys:Double x:Key="FontSizeXs" xmlns:sys="clr-namespace:System;assembly=mscorlib">11</sys:Double>
+    <sys:Double x:Key="FontSizeSm" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+    <sys:Double x:Key="FontSizeBase" xmlns:sys="clr-namespace:System;assembly=mscorlib">14</sys:Double>
+    <sys:Double x:Key="FontSizeLg" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
+    <sys:Double x:Key="FontSizeXl" xmlns:sys="clr-namespace:System;assembly=mscorlib">18</sys:Double>
+    <sys:Double x:Key="FontSize2xl" xmlns:sys="clr-namespace:System;assembly=mscorlib">24</sys:Double>
+    <sys:Double x:Key="FontSize3xl" xmlns:sys="clr-namespace:System;assembly=mscorlib">30</sys:Double>
+
+    <!-- ============================================================
+         Spacing Scale (4px base unit)
+         ============================================================ -->
+    <sys:Double x:Key="Spacing1" xmlns:sys="clr-namespace:System;assembly=mscorlib">4</sys:Double>
+    <sys:Double x:Key="Spacing2" xmlns:sys="clr-namespace:System;assembly=mscorlib">8</sys:Double>
+    <sys:Double x:Key="Spacing3" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+    <sys:Double x:Key="Spacing4" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
+    <sys:Double x:Key="Spacing5" xmlns:sys="clr-namespace:System;assembly=mscorlib">20</sys:Double>
+    <sys:Double x:Key="Spacing6" xmlns:sys="clr-namespace:System;assembly=mscorlib">24</sys:Double>
+    <sys:Double x:Key="Spacing8" xmlns:sys="clr-namespace:System;assembly=mscorlib">32</sys:Double>
+    <sys:Double x:Key="Spacing10" xmlns:sys="clr-namespace:System;assembly=mscorlib">40</sys:Double>
+
+    <!-- ============================================================
          Global Styles
          ============================================================ -->
 
     <!-- Window background -->
     <Style TargetType="Window">
-        <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI, PingFang SC, Microsoft YaHei, Noto Sans SC, sans-serif"/>
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -99,43 +156,95 @@
         <Setter Property="Background" Value="Transparent"/>
     </Style>
 
-    <!-- ScrollBar -->
-    <Style TargetType="ScrollBar">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Width" Value="6"/>
+    <!-- ═══════════════════════════════════════════════════════════
+         ScrollBar Thumb (theme-specific colors)
+         ═══════════════════════════════════════════════════════════ -->
+    <Style x:Key="ScrollBarThumbStyle" TargetType="Thumb">
+        <Setter Property="Width" Value="4"/>
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Background" Value="{DynamicResource ScrollbarThumbBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="thumbBorder"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="2"
+                            Width="4"
+                            HorizontalAlignment="Center"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="thumbBorder"
+                                                         Storyboard.TargetProperty="Width"
+                                                         To="6" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <ColorAnimation Storyboard.TargetName="thumbBorder"
+                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                        To="#26FFFFFF" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="thumbBorder"
+                                                         Storyboard.TargetProperty="Width"
+                                                         To="4" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <ColorAnimation Storyboard.TargetName="thumbBorder"
+                                                        Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                        To="#14FFFFFF" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Default TextBlock -->
     <Style TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
     </Style>
 
     <!-- Default TextBox -->
     <Style TargetType="TextBox">
         <Setter Property="Background" Value="#33000000"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12,9"/>
-        <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}"/>
-        <Setter Property="SelectionBrush" Value="{StaticResource AccentSubtleBrush}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource AccentSubtleBrush}"/>
     </Style>
 
     <!-- PasswordBox -->
     <Style TargetType="PasswordBox">
         <Setter Property="Background" Value="#33000000"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="12,9"/>
-        <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}"/>
-        <Setter Property="SelectionBrush" Value="{StaticResource AccentSubtleBrush}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource AccentSubtleBrush}"/>
     </Style>
 
     <!-- Default Button -->
     <Style TargetType="Button">
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -146,13 +255,13 @@
     <!-- ComboBox -->
     <Style TargetType="ComboBox">
         <Setter Property="Background" Value="#33000000"/>
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderDefaultBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}"/>
     </Style>
 
     <!-- Expander -->
     <Style TargetType="Expander">
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -160,52 +269,9 @@
 
     <!-- ProgressBar (indeterminate spinner) -->
     <Style TargetType="ProgressBar">
-        <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="Background" Value="#14FFFFFF"/>
         <Setter Property="BorderThickness" Value="0"/>
     </Style>
-
-    <!-- DataTemplates for panel navigation -->
-    <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}"
-                  xmlns:viewmodels="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-                  xmlns:views="clr-namespace:ClaudeCodePanel.Windows.Views.Dashboard">
-        <views:DashboardView/>
-    </DataTemplate>
-
-    <DataTemplate DataType="{x:Type viewmodels:APIConfigViewModel}"
-                  xmlns:viewmodels="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-                  xmlns:views="clr-namespace:ClaudeCodePanel.Windows.Views.API">
-        <views:APIConfigView/>
-    </DataTemplate>
-
-    <DataTemplate DataType="{x:Type viewmodels:ConfigEditorViewModel}"
-                  xmlns:viewmodels="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-                  xmlns:views="clr-namespace:ClaudeCodePanel.Windows.Views.Config">
-        <views:ConfigEditorView/>
-    </DataTemplate>
-
-    <DataTemplate DataType="{x:Type viewmodels:MCPManagerViewModel}"
-                  xmlns:viewmodels="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-                  xmlns:views="clr-namespace:ClaudeCodePanel.Windows.Views.MCP">
-        <views:MCPServerListView/>
-    </DataTemplate>
-
-    <DataTemplate DataType="{x:Type viewmodels:SkillManagerViewModel}"
-                  xmlns:viewmodels="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-                  xmlns:views="clr-namespace:ClaudeCodePanel.Windows.Views.Skills">
-        <views:SkillsListView/>
-    </DataTemplate>
-
-    <DataTemplate DataType="{x:Type viewmodels:InstallerViewModel}"
-                  xmlns:viewmodels="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-                  xmlns:views="clr-namespace:ClaudeCodePanel.Windows.Views.Installer">
-        <views:InstallerView/>
-    </DataTemplate>
-
-    <DataTemplate DataType="{x:Type viewmodels:EnvCheckViewModel}"
-                  xmlns:viewmodels="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-                  xmlns:views="clr-namespace:ClaudeCodePanel.Windows.Views.EnvCheck">
-        <views:EnvCheckView/>
-    </DataTemplate>
 
 </ResourceDictionary>

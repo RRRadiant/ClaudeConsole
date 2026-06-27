@@ -23,7 +23,7 @@
             <Button x:Name="InstallBtn" Grid.Column="1"
                     Click="OnShowInstallDialog" Cursor="Hand"
                     Background="Transparent"
-                    BorderBrush="{StaticResource AccentBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}"
                     BorderThickness="1"
                     Padding="18,9" VerticalAlignment="Center">
                 <Button.Resources>
@@ -33,9 +33,9 @@
                 </Button.Resources>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets"
-                               FontSize="15" Foreground="{StaticResource AccentBrush}"/>
+                               FontSize="15" Foreground="{DynamicResource AccentBrush}"/>
                     <TextBlock Text="安装…" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{StaticResource AccentBrush}" Margin="6,0,0,0"/>
+                               Foreground="{DynamicResource AccentBrush}" Margin="6,0,0,0"/>
                 </StackPanel>
             </Button>
         </Grid>
@@ -55,7 +55,7 @@
                               FontSize="15" FontWeight="SemiBold" IsChecked="True">
                     <ToggleButton.Style>
                         <Style TargetType="ToggleButton">
-                            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                             <Setter Property="Foreground" Value="White"/>
                             <Setter Property="Template">
                                 <Setter.Value>
@@ -69,7 +69,7 @@
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsChecked" Value="False">
                                                 <Setter TargetName="border" Property="Background" Value="Transparent"/>
-                                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -86,7 +86,7 @@
                     <ToggleButton.Style>
                         <Style TargetType="ToggleButton">
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ToggleButton">
@@ -98,7 +98,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsChecked" Value="True">
-                                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                                 <Setter Property="Foreground" Value="White"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>

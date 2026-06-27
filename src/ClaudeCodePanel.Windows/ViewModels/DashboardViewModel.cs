@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Models;
 using ClaudeCodePanel.Windows.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -17,11 +18,14 @@ namespace ClaudeCodePanel.Windows.ViewModels;
 /// </summary>
 public partial class DashboardViewModel : ObservableObject
 {
-    private readonly ConfigFileService _configFileService;
-    private readonly CredentialService _credentialService;
+    private readonly IConfigFileService _configFileService;
+    private readonly ICredentialService _credentialService;
 
     [ObservableProperty]
     private DashboardSummary _summary = new();
+
+    [ObservableProperty]
+    private bool _isLoading;
 
     /// <summary>
     /// Always false on Windows — there is no DMG / /Applications concept.
@@ -29,7 +33,7 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty]
     private bool _isRunningFromDMG;
 
-    public DashboardViewModel(ConfigFileService configFileService, CredentialService credentialService)
+    public DashboardViewModel(IConfigFileService configFileService, ICredentialService credentialService)
     {
         _configFileService = configFileService;
         _credentialService = credentialService;
@@ -38,38 +42,80 @@ public partial class DashboardViewModel : ObservableObject
     /// <summary>
     /// Gathers dashboard data from the local filesystem and Claude CLI,
     /// then applies all updates on the UI thread via Dispatcher.InvokeAsync.
+    /// Independent operations run concurrently for faster load times.
     /// </summary>
     public async Task LoadSummaryAsync()
     {
-        // ── 1. Check Claude CLI via InstallerService (thorough Windows detection) ──
-        var status = await InstallerService.Instance.GetClaudeStatusAsync();
-        bool claudeInstalled = status.Installed;
-        string claudeVersion = status.Version ?? "";
-
-        // ── 2. Read settings.json once for models + provider ──────────
-        int enabledModelsCount = 0;
-        bool apiConnected = false;
-        string apiProvider = "";
-        APIProvider? configuredProvider = null;
+        if (IsLoading) return;
+        IsLoading = true;
 
         try
         {
-            var settingsDict = _configFileService.ReadJSON(_configFileService.SettingsPath);
+            // Clear previous events to prevent unbounded growth
+            Summary.RecentEvents.Clear();
+
+            // ── Launch independent operations concurrently ──
+            var claudeStatusTask = InstallerService.Instance.GetClaudeStatusAsync();
+            var settingsTask = Task.Run(() =>
+            {
+                try { return _configFileService.ReadJSON(_configFileService.SettingsPath); }
+                catch { return null; }
+            });
+            var mcpTask = Task.Run(() =>
+            {
+                try
+                {
+                    var mcpPath = _configFileService.McpPath;
+                    if (!File.Exists(mcpPath)) return (0, 0);
+                    var mcpJson = File.ReadAllText(mcpPath);
+                    using var doc = JsonDocument.Parse(mcpJson);
+                    if (doc.RootElement.TryGetProperty("servers", out var serversElement) &&
+                        serversElement.ValueKind == JsonValueKind.Array)
+                    {
+                        var servers = serversElement.EnumerateArray().ToList();
+                        int total = servers.Count;
+                        int active = servers.Count(s =>
+                            s.TryGetProperty("enabled", out var enabledElement)
+                                ? enabledElement.GetBoolean()
+                                : true);
+                        return (total, active);
+                    }
+                }
+                catch (Exception ex) { SharedHelpers.SafeLog("DashboardViewModel.LoadSummary.MCP", ex); }
+                return (0, 0);
+            });
+            var skillsTask = Task.Run(() =>
+            {
+                try
+                {
+                    var skillsDir = _configFileService.SkillsDirectory;
+                    return Directory.Exists(skillsDir) ? Directory.GetDirectories(skillsDir).Length : 0;
+                }
+                catch (Exception ex) { SharedHelpers.SafeLog("DashboardViewModel.LoadSummary.Skills", ex); return 0; }
+            });
+
+            await Task.WhenAll(claudeStatusTask, settingsTask, mcpTask, skillsTask).ConfigureAwait(true);
+
+            // ── Collect results ──
+            var status = await claudeStatusTask;
+            bool claudeInstalled = status.Installed;
+            string claudeVersion = status.Version ?? "";
+
+            var settingsDict = await settingsTask;
+            int enabledModelsCount = 0;
+            APIProvider? configuredProvider = null;
+
             if (settingsDict != null)
             {
-                // Count enabled models
                 if (settingsDict.TryGetValue("enabledModels", out var element) &&
                     element.ValueKind == JsonValueKind.Array)
                 {
-                    var models = element.EnumerateArray()
+                    enabledModelsCount = element.EnumerateArray()
                         .Select(m => m.GetString())
                         .Where(s => s != null)
-                        .Select(s => s!)
-                        .ToList();
-                    enabledModelsCount = models.Count;
+                        .Count();
                 }
 
-                // Determine API provider
                 if (settingsDict.TryGetValue("provider", out var providerElement))
                 {
                     var providerStr = providerElement.GetString()?.ToLowerInvariant();
@@ -83,124 +129,91 @@ public partial class DashboardViewModel : ObservableObject
                     };
                 }
             }
-        }
-        catch
-        {
-            // Ignore errors reading settings
-        }
 
-        if (configuredProvider.HasValue)
-        {
-            // Check the configured provider's credential first
-            if (_credentialService.Exists(configuredProvider.Value.CredentialKey()))
+            var (totalMCPServersCount, activeMCPServersCount) = await mcpTask;
+            var installedSkillsCount = await skillsTask;
+
+            // ── API credential check ──
+            bool apiConnected = false;
+            string apiProvider = "";
+
+            if (configuredProvider.HasValue && _credentialService.Exists(configuredProvider.Value.CredentialKey()))
             {
                 apiConnected = true;
                 apiProvider = configuredProvider.Value.DisplayName();
             }
-        }
 
-        // Fallback: if no provider configured or its credential is missing,
-        // scan all providers for any existing credential.
-        if (!apiConnected)
-        {
-            foreach (var provider in APIProviderExtensions.AllCases)
+            if (!apiConnected)
             {
-                if (_credentialService.Exists(provider.CredentialKey()))
+                foreach (var provider in APIProviderExtensions.AllCases)
+                {
+                    if (_credentialService.Exists(provider.CredentialKey()))
+                    {
+                        apiConnected = true;
+                        apiProvider = provider.DisplayName();
+                        break;
+                    }
+                }
+            }
+
+            // ── SyncService fallback ──
+            var synced = SyncService.Instance.SyncAll();
+            if (synced.DidSync)
+            {
+                if (!apiConnected && !string.IsNullOrEmpty(synced.ApiKey))
                 {
                     apiConnected = true;
-                    apiProvider = provider.DisplayName();
-                    break;
+                    apiProvider = synced.Provider.DisplayName();
                 }
-            }
-        }
-
-        // ── 4. Count MCP servers from mcp.json ─────────────────────────
-        int totalMCPServersCount = 0;
-        int activeMCPServersCount = 0;
-
-        try
-        {
-            var mcpPath = _configFileService.McpPath;
-            if (File.Exists(mcpPath))
-            {
-                var mcpJson = await File.ReadAllTextAsync(mcpPath);
-                using var doc = JsonDocument.Parse(mcpJson);
-                if (doc.RootElement.TryGetProperty("servers", out var serversElement) &&
-                    serversElement.ValueKind == JsonValueKind.Array)
+                if (totalMCPServersCount == 0 && synced.McpServers.Count > 0)
                 {
-                    var servers = serversElement.EnumerateArray().ToList();
-
-                    totalMCPServersCount = servers.Count;
-                    activeMCPServersCount = servers.Count(s =>
-                        s.TryGetProperty("enabled", out var enabledElement)
-                            ? enabledElement.GetBoolean()
-                            : true);
+                    totalMCPServersCount = synced.McpServers.Count;
+                    activeMCPServersCount = synced.McpServers.Count(s => s.Enabled);
                 }
+                if (installedSkillsCount == 0 && synced.SkillIds.Count > 0)
+                    installedSkillsCount = synced.SkillIds.Count;
+                if (enabledModelsCount == 0 && synced.EnabledModels.Count > 0)
+                    enabledModelsCount = synced.EnabledModels.Count;
             }
-        }
-        catch
-        {
-            // Ignore errors reading MCP config
-        }
 
-        // ── 5. Count installed skills from ~/.claude/skills/ directory ─
-        int installedSkillsCount = 0;
-
-        try
-        {
-            var skillsDir = _configFileService.SkillsDirectory;
-            if (Directory.Exists(skillsDir))
+            // ── Apply all updates on the UI thread ──
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                installedSkillsCount = Directory.GetDirectories(skillsDir).Length;
-            }
+                Summary.IsClaudeInstalled = claudeInstalled;
+                Summary.ClaudeVersion = claudeVersion;
+                Summary.EnabledModelsCount = enabledModelsCount;
+                Summary.ApiConnected = apiConnected;
+                Summary.ApiProvider = apiProvider;
+                Summary.TotalMCPServersCount = totalMCPServersCount;
+                Summary.ActiveMCPServersCount = activeMCPServersCount;
+                Summary.InstalledSkillsCount = installedSkillsCount;
+
+                if (claudeInstalled)
+                    Summary.AddEvent($"Claude CLI 已检测: {claudeVersion}", DashboardEventType.Success);
+                else
+                    Summary.AddEvent("Claude CLI 未安装", DashboardEventType.Error);
+
+                if (apiConnected)
+                    Summary.AddEvent($"API 已连接: {apiProvider}", DashboardEventType.Success);
+                else
+                    Summary.AddEvent("API 未配置", DashboardEventType.Error);
+
+                if (enabledModelsCount > 0)
+                    Summary.AddEvent($"已启用 {enabledModelsCount} 个模型", DashboardEventType.Success);
+
+                if (installedSkillsCount > 0)
+                    Summary.AddEvent($"已安装 {installedSkillsCount} 个 Skill", DashboardEventType.Success);
+
+                if (totalMCPServersCount > 0)
+                    Summary.AddEvent($"MCP 服务: {activeMCPServersCount}/{totalMCPServersCount} 运行中", DashboardEventType.Success);
+
+                Summary.AddEvent("仪表盘已刷新", DashboardEventType.Info);
+            });
         }
-        catch
+        finally
         {
-            // Ignore errors reading skills directory
+            IsLoading = false;
         }
-
-        // ── 6. Fallback: SyncService.SyncAll() to fill any gaps ────────
-        var synced = SyncService.Instance.SyncAll();
-        if (synced.DidSync)
-        {
-            if (!apiConnected && !string.IsNullOrEmpty(synced.ApiKey))
-            {
-                apiConnected = true;
-                apiProvider = synced.Provider.DisplayName();
-            }
-
-            if (totalMCPServersCount == 0 && synced.McpServers.Count > 0)
-            {
-                totalMCPServersCount = synced.McpServers.Count;
-                activeMCPServersCount = synced.McpServers.Count(s => s.Enabled);
-            }
-
-            if (installedSkillsCount == 0 && synced.SkillIds.Count > 0)
-            {
-                installedSkillsCount = synced.SkillIds.Count;
-            }
-
-            if (enabledModelsCount == 0 && synced.EnabledModels.Count > 0)
-            {
-                enabledModelsCount = synced.EnabledModels.Count;
-            }
-        }
-
-        // ── Apply all updates on the UI thread ─────────────────────────
-        await Application.Current.Dispatcher.InvokeAsync(() =>
-        {
-            Summary.IsClaudeInstalled = claudeInstalled;
-            Summary.ClaudeVersion = claudeVersion;
-            Summary.EnabledModelsCount = enabledModelsCount;
-            Summary.ApiConnected = apiConnected;
-            Summary.ApiProvider = apiProvider;
-            Summary.TotalMCPServersCount = totalMCPServersCount;
-            Summary.ActiveMCPServersCount = activeMCPServersCount;
-            Summary.InstalledSkillsCount = installedSkillsCount;
-
-            // 7. Add "仪表盘已刷新" event
-            Summary.AddEvent("仪表盘已刷新", DashboardEventType.Info);
-        });
     }
 
     /// <summary>

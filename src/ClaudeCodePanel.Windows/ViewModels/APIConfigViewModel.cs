@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -36,9 +37,9 @@ public partial class APIConfigViewModel : ObservableObject
     // ──────────────────────────────────────────────
     //  Injected services
     // ──────────────────────────────────────────────
-    private readonly ConfigFileService _configFileService;
-    private readonly CredentialService _credentialService;
-    private readonly SyncService _syncService;
+    private readonly IConfigFileService _configFileService;
+    private readonly ICredentialService _credentialService;
+    private readonly ISyncService _syncService;
     private static readonly HttpClient _httpClient = new()
     {
         DefaultRequestHeaders = { { "User-Agent", "ClaudeCodePanel-Windows/1.0" } }
@@ -130,9 +131,9 @@ public partial class APIConfigViewModel : ObservableObject
     // ──────────────────────────────────────────────
 
     public APIConfigViewModel(
-        ConfigFileService configFileService,
-        CredentialService credentialService,
-        SyncService? syncService = null)
+        IConfigFileService configFileService,
+        ICredentialService credentialService,
+        ISyncService? syncService = null)
     {
         _configFileService = configFileService;
         _credentialService = credentialService;
@@ -256,27 +257,29 @@ public partial class APIConfigViewModel : ObservableObject
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // settings.json not found or invalid
+            Debug.WriteLine($"[APIConfigViewModel] LoadConfig settings.json parse failed: {ex.Message}");
         }
 
         // ── 3. Read API key from CredentialService (secure storage) ──
-        try
+        if (_credentialService.TryRead(SelectedProvider.CredentialKey(), out var key))
         {
-            var key = _credentialService.Read(SelectedProvider.CredentialKey());
             if (!string.IsNullOrEmpty(key))
             {
                 ApiKey = key;
             }
         }
-        catch { }
 
         // Persist SyncService API key to Credential Manager (one-time migration)
         if (string.IsNullOrEmpty(ApiKey) && !string.IsNullOrEmpty(synced.ApiKey))
         {
             ApiKey = synced.ApiKey;
-            try { _credentialService.Save(SelectedProvider.CredentialKey(), synced.ApiKey); } catch { }
+            try { _credentialService.Save(SelectedProvider.CredentialKey(), synced.ApiKey); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[APIConfigViewModel] LoadConfig credential save migration failed: {ex.Message}");
+            }
         }
 
         IsKeySaved = !string.IsNullOrEmpty(ApiKey);
@@ -320,7 +323,11 @@ public partial class APIConfigViewModel : ObservableObject
             // Read existing file first to preserve all other keys
             Dictionary<string, JsonElement> rootDict;
             try { rootDict = _configFileService.ReadJSON(settingsPath) ?? new(); }
-            catch { rootDict = new(); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[APIConfigViewModel] SaveConfigAsync ReadJSON failed: {ex.Message}");
+                rootDict = new();
+            }
 
             // Merge/update the "env" object
             Dictionary<string, JsonElement> envDict = new();
@@ -366,11 +373,7 @@ public partial class APIConfigViewModel : ObservableObject
             rootDict["timeout"] = JsonSerializer.SerializeToElement(Timeout);
 
             // Write preserving existing keys
-            var tempPath = settingsPath + ".tmp";
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(rootDict, options);
-            await File.WriteAllTextAsync(tempPath, json, Encoding.UTF8);
-            File.Move(tempPath, settingsPath, overwrite: true);
+            _configFileService.WriteJSON(rootDict, settingsPath);
 
             ErrorMessage = null;
         }
@@ -529,15 +532,10 @@ public partial class APIConfigViewModel : ObservableObject
         ConnectionStatusMessage = null;
 
         // Try to load the new provider's saved key from Credential Manager
-        try
+        if (_credentialService.TryRead(SelectedProvider.CredentialKey(), out var key))
         {
-            var key = _credentialService.Read(SelectedProvider.CredentialKey());
             ApiKey = key;
             IsKeySaved = !string.IsNullOrEmpty(key);
-        }
-        catch
-        {
-            // No saved key for this provider
         }
     }
 
@@ -645,9 +643,9 @@ public partial class APIConfigViewModel : ObservableObject
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Fall through to known models list
+            Debug.WriteLine($"[APIConfigViewModel] DetectAnthropicModelsAsync API call failed: {ex.Message}");
         }
 
         // Fallback: show the known curated list.

@@ -8,10 +8,14 @@
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <AssemblyName>ClaudeConsole</AssemblyName>
     <RootNamespace>ClaudeCodePanel.Windows</RootNamespace>
-    <PlatformTarget>x64</PlatformTarget>
-    <Version>1.1.1</Version>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Version>1.2.0</Version>
     <Authors>Claude Code Panel</Authors>
     <Description>Claude Code Configuration Panel for Windows</Description>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- TODO: Set TreatWarningsAsErrors=true after all CA violations are resolved -->
   </PropertyGroup>
 
   <ItemGroup>

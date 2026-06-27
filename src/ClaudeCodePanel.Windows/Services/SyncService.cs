@@ -23,7 +23,7 @@ public sealed class SyncedConfig
 
 // ─── SyncService singleton ─────────────────────────────────
 
-public sealed class SyncService
+public sealed class SyncService : ISyncService
 {
     public static SyncService Instance { get; } = new();
 

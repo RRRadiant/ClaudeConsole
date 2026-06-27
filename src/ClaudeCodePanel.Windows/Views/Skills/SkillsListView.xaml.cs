@@ -83,7 +83,7 @@ public partial class SkillsListView : UserControl
                     case nameof(SkillManagerViewModel.SearchQuery):
                         // Trigger server-side search when on marketplace tab
                         if (_currentTab == SkillManagerViewModel.SkillTab.Marketplace)
-                            _ = _vm.SearchMarketplaceAsync();
+                            _ = _vm.LoadMarketplaceSkillsAsync();
                         break;
                 }
             });

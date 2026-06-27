@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Models;
 using ClaudeCodePanel.Windows.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -27,13 +29,13 @@ public enum MainPanelType
 
 /// <summary>
 /// A sidebar navigation item that mirrors SidebarItem in the Swift project.
-/// Holds the icon glyph (Segoe MDL2 Assets code), the Chinese display title,
-/// and the panel type it navigates to.
+/// Holds vector icon path data, the Chinese display title, and the panel type.
 /// </summary>
-/// <param name="IconGlyph">Segoe MDL2 Assets font glyph code (e.g. "").</param>
+/// <param name="IconGlyph">Segoe MDL2 Assets font glyph code (legacy).</param>
+/// <param name="IconPathData">SVG path data for modern vector icon (Feather/Ionicon style).</param>
 /// <param name="Title">Chinese display title matching the macOS AppPanel.title.</param>
 /// <param name="PanelType">The <see cref="MainPanelType"/> this item navigates to.</param>
-public record SidebarItem(string IconGlyph, string Title, string Description, MainPanelType PanelType);
+public record SidebarItem(string IconGlyph, string IconPathData, string Title, string Description, MainPanelType PanelType);
 
 /// <summary>
 /// Main navigation ViewModel — replaces ContentView's @State selectedPanel in Swift.
@@ -47,7 +49,7 @@ public record SidebarItem(string IconGlyph, string Title, string Description, Ma
 public partial class MainViewModel : ObservableObject
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly UpdateService _updateService;
+    private readonly IUpdateService _updateService;
 
     // ── Cached ViewModel references ─────────────────────────────────
 
@@ -87,9 +89,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _updateUrl = "";
 
-    /// <summary>Current app version string (e.g. "v1.0.0").</summary>
+    /// <summary>Current app version string (e.g. "v1.0.0") — read from assembly.</summary>
     [ObservableProperty]
-    private string _currentVersionText = "v1.1.1";
+    private string _currentVersionText = 
+        $"v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0"}";
 
     /// <summary>Update status shown in the sidebar: 检查中… / 已是最新 / 发现新版本.</summary>
     [ObservableProperty]
@@ -100,30 +103,42 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Static list of sidebar navigation items.
     /// Titles and icons match the macOS AppPanel enum (SidebarView.swift).
-    /// Icon glyphs use Segoe MDL2 Assets font codes — the closest Windows
-    /// equivalents of the SF Symbol icons used on macOS.
-    ///
-    /// Mapping:
-    ///   Dashboard    — SF "chart.bar.fill"           → MDL2 "" (Chart)
-    ///   API Config   — SF "key.fill"                 → MDL2 "" (Permissions)
-    ///   Config Edit  — SF "doc.text.fill"            → MDL2 "" (Document)
-    ///   MCP Manager  — SF "server.rack"              → MDL2 "" (Server)
-    ///   Skill Mgr    — SF "puzzlepiece.extension.fill" → MDL2 "" (Extension)
+    /// Icon glyphs use Segoe MDL2 Assets font codes.
     /// </summary>
-    public List<SidebarItem> SidebarItems { get; } = new()
+    public List<SidebarItem> SidebarItems { get; private set; } = BuildSidebarItems();
+
+    /// <summary>Refreshes sidebar labels from LocalizationService after language change.</summary>
+    public void RefreshSidebarLabels()
     {
-        new SidebarItem("", "概览",       "系统状态与概览",     MainPanelType.Dashboard),
-        new SidebarItem("", "API 配置",   "配置 API 密钥与模型", MainPanelType.ApiConfig),
-        new SidebarItem("", "配置文件",   "编辑与管理配置文件",   MainPanelType.ConfigEditor),
-        new SidebarItem("", "MCP 服务器", "管理 MCP 服务器连接",  MainPanelType.McpManager),
-        new SidebarItem("", "技能",       "管理 Claude Code 技能", MainPanelType.SkillManager),
-        new SidebarItem("", "安装器",     "安装和管理 Claude Code CLI", MainPanelType.Installer),
-        new SidebarItem("", "环境检测",   "检测 Node.js、npm、Git 环境依赖", MainPanelType.EnvCheck),
-    };
+        SidebarItems = BuildSidebarItems();
+        OnPropertyChanged(nameof(SidebarItems));
+    }
+
+    private static List<SidebarItem> BuildSidebarItems()
+    {
+        var loc = LocalizationService.Instance;
+        return new()
+        {
+            new SidebarItem("", "M3 3h4v4H3z M17 3h4v4h-4z M3 17h4v4H3z M17 17h4v4h-4z",
+                loc["Sidebar.Dashboard"],    loc["Sidebar.DashboardDesc"],    MainPanelType.Dashboard),
+            new SidebarItem("", "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z M12 11v4 M8 15h8",
+                loc["Sidebar.ApiConfig"],    loc["Sidebar.ApiConfigDesc"],    MainPanelType.ApiConfig),
+            new SidebarItem("", "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6",
+                loc["Sidebar.ConfigEditor"], loc["Sidebar.ConfigEditorDesc"], MainPanelType.ConfigEditor),
+            new SidebarItem("", "M4 6h16M4 12h16M4 18h16 M8 6v12 M16 6v12",
+                loc["Sidebar.McpManager"],   loc["Sidebar.McpManagerDesc"],   MainPanelType.McpManager),
+            new SidebarItem("", "M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0z M12 8v8 M8 12h8",
+                loc["Sidebar.SkillManager"], loc["Sidebar.SkillManagerDesc"], MainPanelType.SkillManager),
+            new SidebarItem("", "M12 3v12 M5 12l7 7 7-7 M4 20h16",
+                loc["Sidebar.Installer"],    loc["Sidebar.InstallerDesc"],    MainPanelType.Installer),
+            new SidebarItem("", "M9 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5 M13 3v4H9V3 M9 12l2 2 4-4",
+                loc["Sidebar.EnvCheck"],     loc["Sidebar.EnvCheckDesc"],     MainPanelType.EnvCheck),
+        };
+    }
 
     // ── Constructor ────────────────────────────────────────────────
 
-    public MainViewModel(IServiceProvider serviceProvider, UpdateService? updateService = null)
+    public MainViewModel(IServiceProvider serviceProvider, IUpdateService? updateService = null)
     {
         _serviceProvider = serviceProvider;
         _updateService = updateService ?? UpdateService.Instance;
@@ -132,11 +147,7 @@ public partial class MainViewModel : ObservableObject
         Navigate(MainPanelType.Dashboard);
 
         // Fire-and-forget update check (non-blocking, errors silently swallowed)
-        _ = CheckForUpdateAsync().ContinueWith(t =>
-        {
-            if (t.IsFaulted && t.Exception != null)
-                Debug.WriteLine($"[MainViewModel] Update check failed: {t.Exception.GetBaseException().Message}");
-        }, TaskScheduler.Default);
+        CheckForUpdateAsync().SafeFireAndForget("MainViewModel.CheckForUpdate");
     }
 
     // ── Update check ───────────────────────────────────────────────
@@ -191,7 +202,10 @@ public partial class MainViewModel : ObservableObject
                 UseShellExecute = true
             });
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MainViewModel] OpenUpdateUrl failed: {ex.Message}");
+        }
     }
 
     // ── Navigation ─────────────────────────────────────────────────

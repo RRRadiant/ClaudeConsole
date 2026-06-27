@@ -3,14 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared"
              xmlns:vm="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-             Background="{StaticResource ContentBackgroundBrush}">
+             Background="{DynamicResource ContentBackgroundBrush}">
 
     <UserControl.Resources>
         <!-- ── Dep item template ── -->
         <DataTemplate x:Key="DepItemTemplate" DataType="{x:Type vm:EnvCheckViewModel+DepItem}">
             <Border CornerRadius="12"
-                    Background="{StaticResource GlassCardBgBrush}"
-                    BorderBrush="{StaticResource BorderCardBrush}"
+                    Background="{DynamicResource GlassCardBgBrush}"
+                    BorderBrush="{DynamicResource BorderCardBrush}"
                     BorderThickness="1"
                     Padding="16,14"
                     Margin="0,0,0,8">
@@ -33,11 +33,11 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Installed}" Value="True">
                                         <Setter Property="Text" Value="&#xE930;"/>
-                                        <Setter Property="Foreground" Value="{StaticResource StatusRunningBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource StatusRunningBrush}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Installed}" Value="False">
                                         <Setter Property="Text" Value="&#xE894;"/>
-                                        <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -48,11 +48,11 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Description}"
                                    FontSize="14"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <TextBlock Text="{Binding Version}"
                                    FontSize="11"
                                    FontFamily="Cascadia Code, Consolas, monospace"
-                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    Margin="0,2,0,0"
                                    Visibility="{Binding Installed, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
@@ -67,10 +67,10 @@
                             <Style TargetType="Border">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Installed}" Value="True">
-                                        <Setter Property="Background" Value="{StaticResource StatusRunningBgBrush}"/>
+                                        <Setter Property="Background" Value="{DynamicResource StatusRunningBgBrush}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding Installed}" Value="False">
-                                        <Setter Property="Background" Value="#14FFFFFF"/>
+                                        <Setter Property="Background" Value="{DynamicResource DisabledBackgroundBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -126,10 +126,10 @@
                         <TextBlock Text="环境检测"
                                    FontSize="24"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <TextBlock Text="检测系统依赖，点击下载跳转浏览器"
                                    FontSize="15"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,10,0,0"/>
                     </StackPanel>
 
@@ -137,17 +137,17 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,4,0,0">
                         <Border CornerRadius="10"
                                 Padding="10,4"
-                                Background="{StaticResource StatusRunningBgBrush}"
+                                Background="{DynamicResource StatusRunningBgBrush}"
                                 Margin="0,0,6,0">
                             <TextBlock FontSize="12" FontWeight="SemiBold"
-                                       Foreground="{StaticResource StatusRunningBrush}">
+                                       Foreground="{DynamicResource StatusRunningBrush}">
                                 <Run Text="就绪 "/>
                                 <Run Text="{Binding ReadyCount}"/>
                             </TextBlock>
                         </Border>
                         <Border CornerRadius="10"
                                 Padding="10,4"
-                                Background="{StaticResource StatusErrorBgBrush}">
+                                Background="{DynamicResource StatusErrorBgBrush}">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Style.Triggers>
@@ -158,7 +158,7 @@
                                 </Style>
                             </Border.Style>
                             <TextBlock FontSize="12" FontWeight="SemiBold"
-                                       Foreground="{StaticResource StatusErrorBrush}">
+                                       Foreground="{DynamicResource StatusErrorBrush}">
                                 <Run Text="缺失 "/>
                                 <Run Text="{Binding MissingCount}"/>
                             </TextBlock>
@@ -173,7 +173,7 @@
                     <ProgressBar Width="32" Height="32"
                                  IsIndeterminate="True"/>
                     <TextBlock Text="检测中..."
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                FontSize="14"
                                HorizontalAlignment="Center"
                                Margin="0,12,0,0"/>
@@ -182,11 +182,11 @@
                 <!-- ── All OK Banner ── -->
                 <Border CornerRadius="12"
                         Padding="16,12"
-                        Background="{StaticResource StatusRunningBgBrush}"
+                        Background="{DynamicResource StatusRunningBgBrush}"
                         Margin="0,0,0,20"
                         Visibility="{Binding AllOk, Converter={StaticResource BoolToVisibilityConverter}}">
                     <TextBlock Text="所有依赖已就绪"
-                               Foreground="{StaticResource StatusRunningBrush}"
+                               Foreground="{DynamicResource StatusRunningBrush}"
                                FontSize="14"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"/>
@@ -195,11 +195,11 @@
                 <!-- ── Status Message ── -->
                 <Border CornerRadius="10"
                         Padding="14,10"
-                        Background="{StaticResource StatusErrorBgBrush}"
+                        Background="{DynamicResource StatusErrorBgBrush}"
                         Visibility="{Binding ShowStatusMessage, Converter={StaticResource BoolToVisibilityConverter}}"
                         Margin="0,0,0,12">
                     <TextBlock Text="{Binding StatusMessage}"
-                               Foreground="{StaticResource StatusErrorBrush}"
+                               Foreground="{DynamicResource StatusErrorBrush}"
                                FontSize="13"
                                TextWrapping="Wrap"/>
                 </Border>
@@ -229,7 +229,7 @@
 
                     <StackPanel Margin="20,18" HorizontalAlignment="Center">
                         <TextBlock FontSize="14"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,16">
                             <Run Text="共 "/>

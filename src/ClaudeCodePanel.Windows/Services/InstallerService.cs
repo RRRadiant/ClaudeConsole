@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ClaudeCodePanel.Windows.Helpers;
 
 namespace ClaudeCodePanel.Windows.Services;
 
@@ -11,7 +12,7 @@ namespace ClaudeCodePanel.Windows.Services;
 /// CLI installer and status detection service.
 /// Ported from Claude-Win src/main/ipc/installer.ts.
 /// </summary>
-public sealed class InstallerService
+public sealed class InstallerService : IInstallerService
 {
     public static InstallerService Instance { get; } = new();
 
@@ -90,110 +91,31 @@ public sealed class InstallerService
     /// </summary>
     private static async Task<string?> RunQuickProcessAsync(string fileName, string arguments, int timeoutMs = 5000)
     {
-        try
-        {
-            string actualFileName;
-            string actualArguments;
-
-            var ext = Path.GetExtension(fileName).ToLowerInvariant();
-            if (ext == ".cmd" || ext == ".bat")
-            {
-                actualFileName = "cmd.exe";
-                actualArguments = $"/c \"{fileName}\" {arguments}";
-            }
-            else
-            {
-                actualFileName = fileName;
-                actualArguments = arguments;
-            }
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = actualFileName,
-                Arguments = actualArguments,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            using var p = Process.Start(psi);
-            if (p == null) return null;
-
-            var stdoutTask = p.StandardOutput.ReadToEndAsync();
-            var exitTask = p.WaitForExitAsync();
-            var delayTask = Task.Delay(timeoutMs);
-
-            var completed = await Task.WhenAny(exitTask, delayTask);
-            if (completed == delayTask)
-            {
-                try { p.Kill(); } catch { }
-                return null;
-            }
-
-            await exitTask;
-            var stdout = await stdoutTask;
-            return stdout.Trim();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[InstallerService] RunQuickProcessAsync failed: {ex.Message}");
+        var result = await ProcessRunner.RunAsync(fileName, arguments, timeoutMs).ConfigureAwait(false);
+        if (result.TimedOut || result.ExitCode != 0)
             return null;
-        }
+        return string.IsNullOrWhiteSpace(result.Stdout) ? null : result.Stdout;
     }
 
     // ── Process runner ─────────────────────────────────────
 
     private static async Task<InstallResult> RunCommandAsync(string command, int timeoutMs = 180_000)
     {
-        try
+        var result = await ProcessRunner.RunAsync("cmd.exe", $"/c {command}", timeoutMs).ConfigureAwait(false);
+
+        if (result.TimedOut)
+            return new InstallResult { Success = false, Error = "超时" };
+
+        if (result.ExitCode == 0)
+            return new InstallResult { Success = true };
+
+        return new InstallResult
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c {command}",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null)
-                return new InstallResult { Success = false, Error = "无法启动进程" };
-
-            // Read stdout/stderr asynchronously BEFORE waiting to avoid deadlocks
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
-            var exitTask = process.WaitForExitAsync();
-            var delayTask = Task.Delay(timeoutMs);
-
-            var completed = await Task.WhenAny(exitTask, delayTask);
-            if (completed == delayTask)
-            {
-                try { process.Kill(); } catch { }
-                return new InstallResult { Success = false, Error = "超时" };
-            }
-
-            await exitTask;
-            var stdout = await stdoutTask;
-            var stderr = await stderrTask;
-
-            if (process.ExitCode == 0)
-                return new InstallResult { Success = true };
-
-            return new InstallResult
-            {
-                Success = false,
-                Error = !string.IsNullOrWhiteSpace(stderr)
-                    ? stderr.Trim()
-                    : (!string.IsNullOrWhiteSpace(stdout) ? stdout.Trim() : $"退出码 {process.ExitCode}")
-            };
-        }
-        catch (Exception ex)
-        {
-            return new InstallResult { Success = false, Error = ex.Message };
-        }
+            Success = false,
+            Error = !string.IsNullOrWhiteSpace(result.Stderr)
+                ? result.Stderr.Trim()
+                : (!string.IsNullOrWhiteSpace(result.Stdout) ? result.Stdout.Trim() : $"退出码 {result.ExitCode}")
+        };
     }
 
     // ── Claude Code CLI Install ────────────────────────────

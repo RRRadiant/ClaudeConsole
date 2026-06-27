@@ -42,7 +42,7 @@
                     Visibility="Collapsed"
                     Background="Transparent"
                     BorderThickness="0"
-                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
                     Cursor="Hand"
                     Padding="4"
                     ToolTip="复制 API Key">

@@ -46,15 +46,25 @@ public partial class App : Application
             var services = new ServiceCollection();
 
             // --- Singleton Services (private constructors + static Instance pattern) ---
+            services.AddSingleton<IConfigFileService>(ConfigFileService.Instance);
             services.AddSingleton(ConfigFileService.Instance);
+            services.AddSingleton<ICredentialService>(CredentialService.Instance);
             services.AddSingleton(CredentialService.Instance);
+            services.AddSingleton<IMCPService>(MCPService.Instance);
             services.AddSingleton(MCPService.Instance);
             services.AddSingleton(FileWatcherService.Instance);
+            services.AddSingleton<ISyncService>(SyncService.Instance);
             services.AddSingleton(SyncService.Instance);
+            services.AddSingleton<ISkillRepositoryService>(SkillRepositoryService.Instance);
             services.AddSingleton(SkillRepositoryService.Instance);
+            services.AddSingleton<IInstallerService>(InstallerService.Instance);
             services.AddSingleton(InstallerService.Instance);
+            services.AddSingleton<IEnvironmentService>(EnvironmentService.Instance);
             services.AddSingleton(EnvironmentService.Instance);
+            services.AddSingleton<IUpdateService>(UpdateService.Instance);
             services.AddSingleton(UpdateService.Instance);
+            services.AddSingleton(ThemeService.Instance);
+            services.AddSingleton(LocalizationService.Instance);
 
             // --- ViewModels (singletons — navigate via ContentControl swap) ---
             services.AddSingleton<DashboardViewModel>();
@@ -70,6 +80,9 @@ public partial class App : Application
             services.AddSingleton<MainWindow>();
 
             Services = services.BuildServiceProvider();
+
+            // Apply saved theme before creating any windows
+            ThemeService.Instance.LoadSavedTheme();
 
             // --- App lifecycle (equivalent to AppDelegate.swift) ---
             var watcher = Services.GetRequiredService<FileWatcherService>();

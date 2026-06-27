@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ClaudeCodePanel.Windows.Helpers;
 
 namespace ClaudeCodePanel.Windows.Services;
 
@@ -12,7 +13,7 @@ namespace ClaudeCodePanel.Windows.Services;
 /// Ported from Claude-Win src/main/ipc/deps.ts.
 /// Detects Node.js, npm, and Git installations on Windows.
 /// </summary>
-public sealed class EnvironmentService
+public sealed class EnvironmentService : IEnvironmentService
 {
     public static EnvironmentService Instance { get; } = new();
 
@@ -48,67 +49,8 @@ public sealed class EnvironmentService
     private static async Task<(int exitCode, string stdout, string stderr)> RunProcessAsync(
         string fileName, string arguments, int timeoutMs = 5000)
     {
-        try
-        {
-            string actualFileName;
-            string actualArguments;
-
-            // .cmd / .bat files must run via cmd.exe /c when UseShellExecute=false
-            // to avoid per-version quirks in Process.Start's internal handling.
-            var ext = Path.GetExtension(fileName).ToLowerInvariant();
-            if (ext == ".cmd" || ext == ".bat")
-            {
-                actualFileName = "cmd.exe";
-                actualArguments = $"/c \"{fileName}\" {arguments}";
-            }
-            else
-            {
-                actualFileName = fileName;
-                actualArguments = arguments;
-            }
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = actualFileName,
-                Arguments = actualArguments,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-
-            using var process = Process.Start(psi);
-            if (process == null)
-                return (-1, "", "Failed to start process");
-
-            // Read stdout/stderr asynchronously concurrently with the wait
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
-            // Use Task.WhenAny with a delay for timeout, avoiding CancellationTokenSource
-            // disposal races that can occur with WaitForExitAsync(CancellationToken).
-            var exitTask = process.WaitForExitAsync();
-            var delayTask = Task.Delay(timeoutMs);
-
-            var completed = await Task.WhenAny(exitTask, delayTask);
-            if (completed == delayTask)
-            {
-                try { process.Kill(); } catch { }
-                return (-1, "", "Timeout");
-            }
-
-            // Ensure exitTask is observed (it should already be complete)
-            await exitTask;
-
-            var stdout = await stdoutTask;
-            var stderr = await stderrTask;
-            return (process.ExitCode, stdout.Trim(), stderr.Trim());
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[EnvironmentService] RunProcessAsync failed ({fileName} {arguments}): {ex.Message}");
-            return (-1, "", "");
-        }
+        var result = await ProcessRunner.RunAsync(fileName, arguments, timeoutMs).ConfigureAwait(false);
+        return (result.ExitCode, result.Stdout, result.Stderr);
     }
 
     /// <summary>

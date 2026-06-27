@@ -7,19 +7,19 @@
         <StackPanel>
             <!-- Name -->
             <TextBlock Text="名称" FontSize="15" Margin="0,0,0,6"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <shared:GlassTextField x:Name="ServerName" Variant="Regular"
                                    Placeholder="服务器名称" Margin="0,0,0,16"/>
 
             <!-- Command -->
             <TextBlock Text="命令" FontSize="15" Margin="0,0,0,6"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <shared:GlassTextField x:Name="ServerCommand" Variant="Regular"
                                    Placeholder="npx @anthropic/mcp-server" Margin="0,0,0,16"/>
 
             <!-- Args -->
             <TextBlock Text="参数" FontSize="15" Margin="0,0,0,6"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <Grid Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -28,8 +28,8 @@
                 <shared:GlassTextField x:Name="ArgInput" Variant="Compact" Placeholder="添加参数"/>
                 <Button x:Name="AddArgBtn" Grid.Column="1" Click="OnAddArgClicked" Margin="8,0,0,0"
                         Cursor="Hand" Background="Transparent"
-                        BorderBrush="{StaticResource AccentBrush}"
-                        BorderThickness="1" Foreground="{StaticResource AccentBrush}"
+                        BorderBrush="{DynamicResource AccentBrush}"
+                        BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
                         Padding="14,7">
                     <Button.Resources>
                         <Style TargetType="Border">
@@ -43,7 +43,7 @@
 
             <!-- Env Vars -->
             <TextBlock Text="环境变量" FontSize="15" Margin="0,0,0,6"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
             <Grid Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -55,8 +55,8 @@
                                        Placeholder="值" Margin="8,0"/>
                 <Button x:Name="AddEnvBtn" Grid.Column="2" Click="OnAddEnvClicked" Margin="8,0,0,0"
                         Cursor="Hand" Background="Transparent"
-                        BorderBrush="{StaticResource AccentBrush}"
-                        BorderThickness="1" Foreground="{StaticResource AccentBrush}"
+                        BorderBrush="{DynamicResource AccentBrush}"
+                        BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
                         Padding="14,7">
                     <Button.Resources>
                         <Style TargetType="Border">
@@ -72,17 +72,17 @@
             <StackPanel Orientation="Horizontal">
                 <Button x:Name="CancelBtn" Click="OnCancelClicked" Cursor="Hand"
                         Background="Transparent" BorderThickness="0"
-                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
                         Padding="16,10">
                     <TextBlock Text="取消" FontSize="15"/>
                 </Button>
                 <Button x:Name="SaveBtn" Click="OnSaveClicked" Cursor="Hand" Margin="12,0,0,0"
-                        Background="{StaticResource AccentBrush}" BorderThickness="0"
+                        Background="{DynamicResource AccentBrush}" BorderThickness="0"
                         Foreground="White" Padding="22,10">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="22"/>
-                            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                         </Style>
                     </Button.Resources>
                     <TextBlock Text="保存服务器" FontSize="15" FontWeight="SemiBold"/>

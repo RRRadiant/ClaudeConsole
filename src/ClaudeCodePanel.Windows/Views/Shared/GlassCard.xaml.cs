@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
+using ClaudeCodePanel.Windows.Services;
 
 namespace ClaudeCodePanel.Windows.Views.Shared
 {
@@ -18,7 +20,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
     ///   "Default" — Standard glass panel, 32px radius, 24px padding, 1px border, hover
     ///   "Compact" — Compact card, 24px radius, 18px padding, 1px border, hover
     ///   "Plain"   — 20px padding, no border, no hover
-    ///   "Aurora"  — Enhanced glass, stronger highlight, larger border
+    ///   "Aurora"  — Enhanced glass, stronger highlight, accent-glow shadow
     ///   "Signal"  — Blue-tinted panel, accent glow border
     /// </summary>
     public partial class GlassCard : ContentControl
@@ -70,6 +72,12 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         private Border? _strokeBorder;
         private Grid? _layoutGrid;
         private TextBlock? _titleTextBlock;
+        private Border? _glossHighlight;
+        private bool _entranceAnimated;
+
+        // Drop shadows
+        private DropShadowEffect? _darkModeShadow;
+        private DropShadowEffect? _auroraGlow;
 
         // ── Constructor ───────────────────────────────────────────────────
 
@@ -94,6 +102,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             _strokeBorder = GetTemplateChild("StrokeBorder") as Border;
             _layoutGrid = GetTemplateChild("LayoutGrid") as Grid;
             _titleTextBlock = GetTemplateChild("TitleTextBlock") as TextBlock;
+            _glossHighlight = GetTemplateChild("GlossHighlight") as Border;
 
             if (_outerBorder != null)
             {
@@ -112,6 +121,14 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         {
             UpdateTitle();
             UpdateVariant();
+            ApplyThemeShadows();
+            AnimateContentEntrance();
+
+            // Listen for theme changes to re-apply dark-mode shadow
+            ThemeService.Instance.PropertyChanged += (_, _) =>
+            {
+                Dispatcher.Invoke(ApplyThemeShadows);
+            };
         }
 
         // ── Property Changed Callbacks ────────────────────────────────────
@@ -159,6 +176,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                     _outerBorder.CornerRadius = new CornerRadius(24);
                     _strokeBorder.CornerRadius = new CornerRadius(24);
                     _borderBrush.Color = BorderRestingColor;
+                    RemoveAuroraGlow();
                     break;
 
                 case "Plain":
@@ -166,6 +184,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                     _strokeBorder.BorderThickness = new Thickness(0);
                     _outerBorder.CornerRadius = new CornerRadius(32);
                     _strokeBorder.CornerRadius = new CornerRadius(32);
+                    RemoveAuroraGlow();
                     break;
 
                 case "Aurora":
@@ -174,6 +193,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                     _outerBorder.CornerRadius = new CornerRadius(32);
                     _strokeBorder.CornerRadius = new CornerRadius(32);
                     _borderBrush.Color = BorderAuroraColor;
+                    ApplyAuroraGlow();
                     break;
 
                 case "Signal":
@@ -182,6 +202,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                     _outerBorder.CornerRadius = new CornerRadius(32);
                     _strokeBorder.CornerRadius = new CornerRadius(32);
                     _borderBrush.Color = BorderSignalColor;
+                    RemoveAuroraGlow();
                     break;
 
                 default: // "Default"
@@ -190,11 +211,145 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                     _outerBorder.CornerRadius = new CornerRadius(32);
                     _strokeBorder.CornerRadius = new CornerRadius(32);
                     _borderBrush.Color = BorderRestingColor;
+                    RemoveAuroraGlow();
                     break;
             }
         }
 
-        // ── Hover Animation ───────────────────────────────────────────────
+        // ── Theme-aware drop shadow ───────────────────────────────────────
+
+        /// <summary>
+        /// Applies a subtle DropShadowEffect in dark mode (BlurRadius=16, Opacity=0.15).
+        /// Removed in light mode for clarity.
+        /// </summary>
+        private void ApplyThemeShadows()
+        {
+            if (_outerBorder == null) return;
+
+            bool isDark = ThemeService.Instance.IsDarkTheme;
+
+            if (isDark)
+            {
+                if (_darkModeShadow == null)
+                {
+                    _darkModeShadow = new DropShadowEffect
+                    {
+                        BlurRadius = 16,
+                        Opacity = 0.15,
+                        ShadowDepth = 2,
+                        Color = Colors.Black
+                    };
+                }
+                // Combine: if Aurora, the aurora glow is additional
+                if (_outerBorder.Effect == null || _outerBorder.Effect == _darkModeShadow)
+                    _outerBorder.Effect = _darkModeShadow;
+            }
+            else
+            {
+                // Remove dark-mode shadow in light mode
+                if (_outerBorder.Effect == _darkModeShadow)
+                    _outerBorder.Effect = null;
+            }
+        }
+
+        /// <summary>Adds a blue accent glow (second DropShadowEffect) for Aurora variant.</summary>
+        private void ApplyAuroraGlow()
+        {
+            if (_outerBorder == null) return;
+
+            if (_auroraGlow == null)
+            {
+                _auroraGlow = new DropShadowEffect
+                {
+                    BlurRadius = 12,
+                    Opacity = 0.35,
+                    ShadowDepth = 0,
+                    Color = Color.FromRgb(0x6f, 0xaa, 0xdd) // AccentBrush color
+                };
+            }
+
+            if (_outerBorder.Effect is DropShadowEffect existing)
+            {
+                // If dark-mode shadow exists, replace with aurora (stronger glow takes priority)
+                _outerBorder.Effect = _auroraGlow;
+            }
+            else
+            {
+                _outerBorder.Effect = _auroraGlow;
+            }
+        }
+
+        private void RemoveAuroraGlow()
+        {
+            if (_outerBorder == null) return;
+
+            if (_outerBorder.Effect == _auroraGlow)
+            {
+                // Restore dark-mode shadow if applicable
+                _outerBorder.Effect = ThemeService.Instance.IsDarkTheme ? _darkModeShadow : null;
+            }
+        }
+
+        // ── Content entrance animation ────────────────────────────────────
+
+        /// <summary>
+        /// Animates the first TextBlock in the card content:
+        /// slides up 6px + fades in (300 ms ease-out).
+        /// Uses Tag="animated" on the TextBlock to avoid re-triggering.
+        /// </summary>
+        private void AnimateContentEntrance()
+        {
+            if (_entranceAnimated) return;
+            if (_layoutGrid == null) return;
+
+            // Find the ContentPresenter inside the LayoutGrid (row 1)
+            var cp = FindVisualChild<ContentPresenter>(_layoutGrid);
+            if (cp == null) return;
+
+            // Defer until content is actually loaded
+            cp.Loaded += (_, _) =>
+            {
+                if (_entranceAnimated) return;
+
+                var firstTextBlock = FindVisualChild<TextBlock>(cp);
+                if (firstTextBlock == null) return;
+                if (firstTextBlock.Tag is string tag && tag == "animated") return;
+
+                firstTextBlock.Tag = "animated";
+                _entranceAnimated = true;
+
+                firstTextBlock.RenderTransform = new TranslateTransform(0, 6);
+                firstTextBlock.Opacity = 0;
+
+                var sb = new Storyboard();
+
+                var slideUp = new DoubleAnimation(6, 0, TimeSpan.FromMilliseconds(300))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(slideUp, firstTextBlock);
+                Storyboard.SetTargetProperty(slideUp,
+                    new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
+                sb.Children.Add(slideUp);
+
+                var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(300))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                Storyboard.SetTarget(fadeIn, firstTextBlock);
+                Storyboard.SetTargetProperty(fadeIn, new PropertyPath(UIElement.OpacityProperty));
+                sb.Children.Add(fadeIn);
+
+                sb.Completed += (_, _) =>
+                {
+                    firstTextBlock.RenderTransform = Transform.Identity;
+                };
+
+                sb.Begin();
+            };
+        }
+
+        // ── Hover Animation (300 ms) ──────────────────────────────────────
 
         private void OnMouseEnter(object sender, MouseEventArgs e)
         {
@@ -251,11 +406,25 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             {
                 From = fromColor,
                 To = targetColor,
-                Duration = TimeSpan.FromMilliseconds(200),
+                Duration = TimeSpan.FromMilliseconds(300), // 300 ms as per prompt
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             };
 
             _borderBrush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+        }
+
+        // ── Helper ────────────────────────────────────────────────────────
+
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T found) return found;
+                var descendant = FindVisualChild<T>(child);
+                if (descendant != null) return descendant;
+            }
+            return null;
         }
     }
 }

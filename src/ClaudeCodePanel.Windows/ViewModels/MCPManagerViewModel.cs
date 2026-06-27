@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Models;
 using ClaudeCodePanel.Windows.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -19,8 +21,8 @@ namespace ClaudeCodePanel.Windows.ViewModels;
 /// </summary>
 public partial class MCPManagerViewModel : ObservableObject
 {
-    private readonly ConfigFileService _configFileService;
-    private readonly MCPService _mcpService;
+    private readonly IConfigFileService _configFileService;
+    private readonly IMCPService _mcpService;
 
     // ── Server list ──────────────────────────────────────────
 
@@ -43,9 +45,8 @@ public partial class MCPManagerViewModel : ObservableObject
 
     // ── Connection results ───────────────────────────────────
 
-    /// <summary>Per-server connection test results.</summary>
-    [ObservableProperty]
-    private Dictionary<Guid, MCPConnectionResult> _connectionResults = new();
+    /// <summary>Per-server connection test results. Thread-safe.</summary>
+    private readonly ConcurrentDictionary<Guid, MCPConnectionResult> _connectionResults = new();
 
     // ── Form fields ──────────────────────────────────────────
 
@@ -73,8 +74,8 @@ public partial class MCPManagerViewModel : ObservableObject
     // ── Constructor ──────────────────────────────────────────
 
     public MCPManagerViewModel(
-        ConfigFileService? configFileService = null,
-        MCPService? mcpService = null)
+        IConfigFileService? configFileService = null,
+        IMCPService? mcpService = null)
     {
         _configFileService = configFileService ?? ConfigFileService.Instance;
         _mcpService = mcpService ?? MCPService.Instance;
@@ -121,7 +122,7 @@ public partial class MCPManagerViewModel : ObservableObject
                         if (serverElement.ValueKind != JsonValueKind.Object)
                             continue;
 
-                        var serverDict = EnumerateJsonObject(serverElement);
+                        var serverDict = SharedHelpers.EnumerateJsonObject(serverElement);
                         if (serverDict == null)
                             continue;
 
@@ -135,12 +136,14 @@ public partial class MCPManagerViewModel : ObservableObject
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore errors reading mcp.json
+            SharedHelpers.SafeLog("MCPManagerViewModel.LoadServers", ex);
         }
 
-        Servers = new ObservableCollection<MCPServerConfig>(mergedServers);
+        Servers.Clear();
+        foreach (var s in mergedServers)
+            Servers.Add(s);
     }
 
     // ── Edit ─────────────────────────────────────────────────
@@ -164,7 +167,7 @@ public partial class MCPManagerViewModel : ObservableObject
     /// then persist everything to ~/.claude.json.
     /// </summary>
     [RelayCommand]
-    public Task SaveServerAsync()
+    public void SaveServer()
     {
         MCPServerConfig server;
         if (EditingServer != null)
@@ -191,9 +194,8 @@ public partial class MCPManagerViewModel : ObservableObject
             Servers.Add(server);
         }
 
-        PersistToClaudeJSON();
+        PersistToClaudeJSONAsync().SafeFireAndForget("MCPManagerViewModel.SaveServer");
         ResetForm();
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -207,10 +209,10 @@ public partial class MCPManagerViewModel : ObservableObject
         foreach (var s in toRemove)
             Servers.Remove(s);
 
-        ConnectionResults.Remove(server.Id);
+        _connectionResults.TryRemove(server.Id, out _);
 
         // Fire-and-forget persist (Swift: Task { await persistToClaudeJSON() })
-        PersistToClaudeJSON();
+        PersistToClaudeJSONAsync().SafeFireAndForget("MCPManagerViewModel.DeleteServer");
     }
 
     // ── Test Connection ──────────────────────────────────────
@@ -222,9 +224,9 @@ public partial class MCPManagerViewModel : ObservableObject
     [RelayCommand]
     public async Task TestServerConnectionAsync(MCPServerConfig server)
     {
-        ConnectionResults[server.Id] = MCPConnectionResult.Testing();
-        var result = await _mcpService.TestConnectionAsync(server);
-        ConnectionResults[server.Id] = result;
+        _connectionResults[server.Id] = MCPConnectionResult.Testing();
+        var result = await _mcpService.TestConnectionAsync(server).ConfigureAwait(true);
+        _connectionResults[server.Id] = result;
     }
 
     /// <summary>
@@ -233,7 +235,7 @@ public partial class MCPManagerViewModel : ObservableObject
     /// </summary>
     public MCPConnectionResult ConnectionResultFor(MCPServerConfig server)
     {
-        return ConnectionResults.TryGetValue(server.Id, out var result)
+        return _connectionResults.TryGetValue(server.Id, out var result)
             ? result
             : MCPConnectionResult.Unknown();
     }
@@ -244,7 +246,7 @@ public partial class MCPManagerViewModel : ObservableObject
     /// Write all servers to ~/.claude.json, separating top-level servers
     /// from project-level servers. Preserves all other existing keys in the file.
     /// </summary>
-    private void PersistToClaudeJSON()
+    private async Task PersistToClaudeJSONAsync()
     {
         var claudePath = _configFileService.ClaudeGlobalConfigPath;
 
@@ -255,8 +257,9 @@ public partial class MCPManagerViewModel : ObservableObject
             rootDict = _configFileService.ReadJSON(claudePath)
                        ?? new Dictionary<string, JsonElement>();
         }
-        catch
+        catch (Exception ex)
         {
+            SharedHelpers.SafeLog("MCPManagerViewModel.PersistToClaudeJSON", ex);
             rootDict = new Dictionary<string, JsonElement>();
         }
 
@@ -288,7 +291,7 @@ public partial class MCPManagerViewModel : ObservableObject
             if (rootDict.TryGetValue("projects", out var existingProjects) &&
                 existingProjects.ValueKind == JsonValueKind.Object)
             {
-                projects = EnumerateJsonObject(existingProjects) ?? new();
+                projects = SharedHelpers.EnumerateJsonObject(existingProjects) ?? new();
             }
             else
             {
@@ -301,7 +304,7 @@ public partial class MCPManagerViewModel : ObservableObject
                 if (projects.TryGetValue(projectPath, out var existingProject) &&
                     existingProject.ValueKind == JsonValueKind.Object)
                 {
-                    projectData = EnumerateJsonObject(existingProject) ?? new();
+                    projectData = SharedHelpers.EnumerateJsonObject(existingProject) ?? new();
                 }
                 else
                 {
@@ -416,19 +419,5 @@ public partial class MCPManagerViewModel : ObservableObject
             NewEnvKeyInput = "";
             NewEnvValueInput = "";
         }
-    }
-
-    /// <summary>
-    /// Enumerate a JsonElement of kind Object into a Dictionary without
-    /// a serialize-deserialize round-trip.
-    /// </summary>
-    private static Dictionary<string, JsonElement>? EnumerateJsonObject(JsonElement element)
-    {
-        if (element.ValueKind != JsonValueKind.Object)
-            return null;
-        var dict = new Dictionary<string, JsonElement>();
-        foreach (var prop in element.EnumerateObject())
-            dict[prop.Name] = prop.Value.Clone();
-        return dict;
     }
 }

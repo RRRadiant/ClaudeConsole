@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+
+  <!-- Sidebar -->
+  <data name="Sidebar.Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Sidebar.DashboardDesc" xml:space="preserve"><value>System status &amp; overview</value></data>
+  <data name="Sidebar.ApiConfig" xml:space="preserve"><value>API Config</value></data>
+  <data name="Sidebar.ApiConfigDesc" xml:space="preserve"><value>Configure API keys &amp; models</value></data>
+  <data name="Sidebar.ConfigEditor" xml:space="preserve"><value>Config Files</value></data>
+  <data name="Sidebar.ConfigEditorDesc" xml:space="preserve"><value>Edit &amp; manage config files</value></data>
+  <data name="Sidebar.McpManager" xml:space="preserve"><value>MCP Servers</value></data>
+  <data name="Sidebar.McpManagerDesc" xml:space="preserve"><value>Manage MCP server connections</value></data>
+  <data name="Sidebar.SkillManager" xml:space="preserve"><value>Skills</value></data>
+  <data name="Sidebar.SkillManagerDesc" xml:space="preserve"><value>Manage Claude Code skills</value></data>
+  <data name="Sidebar.Installer" xml:space="preserve"><value>Installer</value></data>
+  <data name="Sidebar.InstallerDesc" xml:space="preserve"><value>Install &amp; manage Claude Code CLI</value></data>
+  <data name="Sidebar.EnvCheck" xml:space="preserve"><value>Env Check</value></data>
+  <data name="Sidebar.EnvCheckDesc" xml:space="preserve"><value>Check development environment</value></data>
+
+  <!-- Brand -->
+  <data name="Brand.Title" xml:space="preserve"><value>Claude Console</value></data>
+  <data name="Brand.Subtitle" xml:space="preserve"><value>Configuration Manager</value></data>
+
+  <!-- Theme -->
+  <data name="Theme.Dark" xml:space="preserve"><value>Dark Mode</value></data>
+  <data name="Theme.DarkHint" xml:space="preserve"><value>Click for light mode</value></data>
+  <data name="Theme.Light" xml:space="preserve"><value>Light Mode</value></data>
+  <data name="Theme.LightHint" xml:space="preserve"><value>Click for dark mode</value></data>
+
+  <!-- Update -->
+  <data name="Update.Checking" xml:space="preserve"><value>Checking…</value></data>
+  <data name="Update.UpToDate" xml:space="preserve"><value>Up to date</value></data>
+  <data name="Update.NewVersion" xml:space="preserve"><value>New version found</value></data>
+  <data name="Update.CheckButton" xml:space="preserve"><value>Check Update</value></data>
+  <data name="Update.Download" xml:space="preserve"><value>Download</value></data>
+  <data name="Update.Banner" xml:space="preserve"><value>New version {0} available — click to download</value></data>
+
+  <!-- General -->
+  <data name="General.Installed" xml:space="preserve"><value>Installed</value></data>
+  <data name="General.NotInstalled" xml:space="preserve"><value>Not installed</value></data>
+  <data name="General.Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="General.Disabled" xml:space="preserve"><value>Disabled</value></data>
+  <data name="General.Running" xml:space="preserve"><value>Running</value></data>
+  <data name="General.Stopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="General.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="General.Cancel" xml:space="preserve"><value>Cancel</value></data>
+
+  <!-- Language -->
+  <data name="Language.Chinese" xml:space="preserve"><value>中文</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+</root>

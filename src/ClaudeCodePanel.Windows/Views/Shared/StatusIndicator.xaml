@@ -4,15 +4,24 @@
              Loaded="OnLoaded">
 
     <StackPanel Orientation="Horizontal">
+        <!-- Status dot with color-matched drop shadow -->
         <Ellipse x:Name="StatusEllipse"
                  Width="7" Height="7"
                  VerticalAlignment="Center"
-                 Fill="{StaticResource StatusStoppedBrush}"
-                 Opacity="1.0"/>
+                 Fill="{DynamicResource StatusStoppedBrush}"
+                 Opacity="0.5">
+            <Ellipse.Effect>
+                <DropShadowEffect x:Name="DotGlow"
+                                  ShadowDepth="0"
+                                  BlurRadius="6"
+                                  Opacity="0.4"
+                                  Color="#999999"/>
+            </Ellipse.Effect>
+        </Ellipse>
         <TextBlock x:Name="LabelTextBlock"
                    VerticalAlignment="Center"
                    Margin="6,0,0,0"
                    FontSize="12"
-                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                   Foreground="{DynamicResource TextSecondaryBrush}"/>
     </StackPanel>
 </UserControl>

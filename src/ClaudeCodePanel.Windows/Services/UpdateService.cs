@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Models;
 
 namespace ClaudeCodePanel.Windows.Services;
@@ -12,7 +14,7 @@ namespace ClaudeCodePanel.Windows.Services;
 /// Checks for updates via the GitHub Releases API.
 /// Compares the latest release tag against the current version.
 /// </summary>
-public sealed class UpdateService
+public sealed class UpdateService : IUpdateService
 {
     public static UpdateService Instance { get; } = new();
 
@@ -21,23 +23,15 @@ public sealed class UpdateService
     private const string GitHubRepo = "ClaudeConsole";
     // ──────────────────────────────────────────────────────────────
 
-    /// <summary>当前版本 — 发布新版本时记得同步更新 csproj 中的 Version</summary>
-    private static readonly Version CurrentVersion = new Version(1, 1, 1);
+    /// <summary>当前版本 — 从程序集版本读取，发布时只需更新 csproj 中的 Version</summary>
+    private static readonly Version CurrentVersion =
+        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
+        ?? new Version(1, 0, 0);
 
     private static readonly string ReleasesApiUrl =
         $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
 
-    private readonly HttpClient _httpClient;
-
-    private UpdateService()
-    {
-        _httpClient = new HttpClient();
-        _httpClient.DefaultRequestHeaders.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(
-            new ProductInfoHeaderValue("ClaudeConsole", "1.0"));
-        _httpClient.Timeout = TimeSpan.FromSeconds(10);
-    }
+    private UpdateService() { }
 
     // ── Public API ────────────────────────────────────────────────
 
@@ -49,8 +43,12 @@ public sealed class UpdateService
     {
         try
         {
-            using var response = await _httpClient
-                .GetAsync(ReleasesApiUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Get, ReleasesApiUrl);
+            request.Headers.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+
+            using var response = await HttpClientFactory.Create()
+                .SendAsync(request)
                 .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -91,8 +89,9 @@ public sealed class UpdateService
                 DownloadUrl = downloadUrl
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[UpdateService] CheckForUpdateAsync failed: {ex.Message}");
             return null;
         }
     }

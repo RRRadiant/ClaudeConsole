@@ -18,7 +18,7 @@
         <Border x:Name="StrokeBorder"
                 CornerRadius="16"
                 BorderThickness="1"
-                Background="#33000000"
+                Background="{DynamicResource InputBackgroundBrush}"
                 ClipToBounds="True">
 
             <Grid x:Name="ContentGrid"
@@ -37,7 +37,7 @@
                            FontFamily="Segoe MDL2 Assets"
                            FontSize="15"
                            Text="&#xE721;"
-                           Foreground="{StaticResource TextTertiaryBrush}"
+                           Foreground="{DynamicResource TextTertiaryBrush}"
                            VerticalAlignment="Center"
                            Margin="0,0,6,0"/>
 
@@ -45,15 +45,15 @@
                 <Grid Grid.Column="1">
                     <TextBlock x:Name="WatermarkBlock"
                                IsHitTestVisible="False"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                VerticalAlignment="Center"
                                Text=""
                                Visibility="Collapsed"/>
 
                     <TextBox x:Name="InputTextBox"
                              Background="Transparent"
-                             Foreground="{StaticResource TextPrimaryBrush}"
-                             CaretBrush="{StaticResource AccentBrush}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             CaretBrush="{DynamicResource AccentBrush}"
                              BorderThickness="0"
                              VerticalContentAlignment="Center"
                              FontSize="14"
@@ -68,7 +68,7 @@
                         Width="20" Height="20"
                         Background="Transparent"
                         BorderThickness="0"
-                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
                         FontFamily="Segoe MDL2 Assets"
                         FontSize="12"
                         Content="&#xE711;"

@@ -34,6 +34,14 @@ Requires: **.NET 9.0 SDK** (https://dotnet.microsoft.com/download/dotnet/9.0)
 | 🟠 Architecture (6) | 7 ViewModels support constructor injection (optional param + Instance fallback), MainViewModel caches resolved ViewModels, MCPService Process.Exited leak fix, silent catch blocks now log Debug.WriteLine, async void handlers wrapped in try/catch, ConfigFileService.TryReadJSON added |
 | 🟡 Quality (5) | SharedHelpers extracted (CapitalizeWords, EnumerateJsonObject), xUnit test project with 92 tests, unused usings removed, ConfigFileType equality tests, SkillRepositoryService frontmatter parsing tests |
 
+### v1.2.0 – Quality & Architecture Upgrade
+
+| Category | Changes |
+|----------|---------|
+| 🔴 Fixes (17) | All 14+ empty catch blocks now log via Debug.WriteLine; UpdateService distinguishes "no update" from "check failed"; CredentialService.Read replaced with TryRead (no exception-as-control-flow); MCPServerListView OnEditorSave empty catch fixed |
+| 🟠 Architecture (4) | Version unified — reads from Assembly.GetExecutingAssembly().GetName().Version (single source of truth: .csproj); MCPService TestStdioConnectionAsync stderr race eliminated (direct async pattern, removed Exited event+tcs+cts); git clone WaitForExit → WaitForExitAsync with 3-minute timeout; PlatformTarget x64 → AnyCPU (ARM64 support) |
+| 🟡 Quality (3) | Duplicate CapitalizeWords removed (SkillRepositoryService + SkillManagerViewModel now use SharedHelpers); MCPManagerViewModel.SaveServerAsync fake async → void SaveServer; unused System.Globalization usings removed |
+
 ### v1.1.1 – npm Detection Fix
 
 - `.cmd`/`.bat` files now run via `cmd.exe /c` explicitly (matching InstallerService.RunCommandAsync pattern)
@@ -48,7 +56,11 @@ Requires: **.NET 9.0 SDK** (https://dotnet.microsoft.com/download/dotnet/9.0)
 - **Skill Marketplace** — fetches official skill list with real names/descriptions from SKILL.md, GitHub URL auto-detection in search bar, built-in offline fallback (37 skills), mirror retry for China network
 - **Installer Panel** — one-click Claude Code CLI install/uninstall via npm/winget
 - **Env Check Panel** — detects Node.js, npm, Git status and versions
-- **Version Display** — sidebar footer shows `v1.1.0` + update status dot (green "已是最新" / grey "检查中…" / red "发现新版本")
+- **Dark/Light Theme** — complete dual design system, persisted preference, sidebar toggle
+- **I18n Support** — Chinese/English resource files (30+ strings), runtime language switching
+- **Design System** — typography scale, spacing scale (4px grid), corner radius tokens
+- **GlassCard Micro-interactions** — hover scale animation, border color transition
+- **Premium Sidebar** — rainbow-gradient brand logo, PREFERENCES section, accent update button
 
 ---
 
@@ -63,7 +75,7 @@ ClaudeCodePanel.Windows/
 ├── ClaudeConsole-Portable.zip          ← latest portable build
 ├── release/ClaudeConsole.exe           ← latest self-contained single-file exe
 └── src/ClaudeCodePanel.Windows/
-    ├── ClaudeCodePanel.Windows.csproj  ← net9.0-windows, AssemblyName=ClaudeConsole, Version=1.1.1
+    ├── ClaudeCodePanel.Windows.csproj  ← net9.0-windows, AssemblyName=ClaudeConsole, Version=1.2.0
     ├── App.xaml / App.xaml.cs          ← DI container, global exception handlers, lifecycle
     ├── Models/
     │   ├── APIProvider.cs              ← Anthropic/OpenAI/DeepSeek/Custom enum + extensions
@@ -137,7 +149,7 @@ ClaudeCodePanel.Windows/
 ```
 Startup → CheckForUpdateAsync()
   → GET api.github.com/repos/RRRadiant/ClaudeConsole/releases/latest
-  → Compare tag_name vs. hardcoded Version(1,1,1)
+  → Compare tag_name vs. assembly version (no more hardcoded constant)
   → Newer? Show blue banner + "发现 vX.Y.Z" in sidebar
   → User clicks → browser opens release page
   → Sidebar button → manual re-check
@@ -146,14 +158,14 @@ Startup → CheckForUpdateAsync()
 ## GitHub Release
 
 - **Repo:** https://github.com/RRRadiant/ClaudeConsole
-- **Release tag format:** `v1.1.1` (semver, optional `v` prefix)
+- **Release tag format:** `v1.2.0` (semver, optional `v` prefix)
 - **Upload:** `release/ClaudeConsole.exe` + `ClaudeConsole-Portable.zip`
-- **UpdateService.cs line 25:** bump `CurrentVersion` constant when releasing new version
+- **Version is read from assembly** — just bump `<Version>` in `.csproj` when releasing
 
 ## Publishing
 
 ```powershell
-# Self-contained portable (no runtime needed)
+# Self-contained portable (no runtime needed) — supports win-x64 and win-arm64
 dotnet publish src/ClaudeCodePanel.Windows -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o release/
 
 # ZIP for distribution
@@ -162,13 +174,24 @@ powershell -Command "Compress-Archive -Path release/ClaudeConsole.exe -Destinati
 
 ## Design Tokens
 
-| Token | Value |
-|-------|-------|
-| Window background | `#1C1C1E` |
-| Sidebar background | `#1A1A1D` |
-| GlassCard fill | `#CC1A1A1A` (80% opacity) |
-| Accent | `#007AFF` |
-| Success | `#30D158` |
-| Error | `#FF453A` |
-| Corner radius | 14 (cards), 8 (inputs) |
-| Config path | `%USERPROFILE%\.claude\` |
+### Color System
+
+| Token | Dark | Light |
+|-------|------|-------|
+| Window bg | `#080d1f` | `#f8f9fa` |
+| Sidebar bg | `#0c0e18` | `#ffffff` |
+| Accent | `#6faadd` | `#2563eb` |
+| Text primary | `#F2FFFFFF` | `#111827` |
+| Text secondary | `#99FFFFFF` | `#6b7280` |
+| Success | `#34d399` | `#059669` |
+| Error | `#f87171` | `#dc2626` |
+
+### Scale Tokens
+
+| Scale | Values |
+|-------|--------|
+| Radius | Sm(4) Md(6) Lg(8) Xl(12) 2xl(16) 3xl(24) 4xl(32) |
+| Font | Xs(11) Sm(12) Base(14) Lg(16) Xl(18) 2xl(24) 3xl(30) |
+| Spacing | 1(4px) 2(8) 3(12) 4(16) 5(20) 6(24) 8(32) 10(40) |
+
+| Config path | `%USERPROFILE%\\.claude\\` |

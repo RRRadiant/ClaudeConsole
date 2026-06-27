@@ -9,74 +9,166 @@
         <Style x:Key="SidebarNavButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="52"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border"
                                 Background="{TemplateBinding Background}"
                                 CornerRadius="12"
-                                Padding="12,0"
                                 Margin="5,2">
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Icon -->
-                                <TextBlock x:Name="iconBlock"
-                                           Grid.Column="0"
-                                           Text="{Binding IconGlyph}"
-                                           FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
-                                           FontSize="20"
-                                           Width="28"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Center"
-                                           Foreground="{TemplateBinding Foreground}"/>
-
-                                <!-- Title + Description -->
-                                <StackPanel Grid.Column="1"
-                                            Margin="10,0,0,0"
-                                            VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title}"
-                                               FontSize="15"
-                                               FontWeight="SemiBold"
-                                               Foreground="{TemplateBinding Foreground}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Description}"
-                                               FontSize="12"
-                                               Foreground="{StaticResource TextTertiaryBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-
-                                <!-- Active dot indicator -->
-                                <Ellipse x:Name="activeDot"
-                                         Grid.Column="2"
-                                         Width="10"
-                                         Height="10"
-                                         Fill="{StaticResource AccentBrush}"
-                                         Visibility="Collapsed"
-                                         Margin="0,0,6,0">
-                                    <Ellipse.Effect>
-                                        <DropShadowEffect ShadowDepth="0"
-                                                          BlurRadius="8"
-                                                          Opacity="0.5"
+                                <!-- Left accent bar (3px, animated height on hover, permanent on active) -->
+                                <Border x:Name="accentBar"
+                                        Width="3"
+                                        Height="0"
+                                        CornerRadius="1.5"
+                                        Background="{DynamicResource AccentBrush}"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Margin="4,0,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect x:Name="accentGlow"
+                                                          ShadowDepth="0"
+                                                          BlurRadius="6"
+                                                          Opacity="0"
                                                           Color="#6faadd"/>
-                                    </Ellipse.Effect>
-                                </Ellipse>
+                                    </Border.Effect>
+                                </Border>
+
+                                <!-- Main content grid -->
+                                <Grid Margin="16,0,12,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Icon: vector Path in Viewbox, with rotation transform -->
+                                    <Viewbox Grid.Column="0"
+                                             x:Name="iconViewbox"
+                                             Width="22" Height="22"
+                                             VerticalAlignment="Center"
+                                             HorizontalAlignment="Center"
+                                             RenderTransformOrigin="0.5,0.5">
+                                        <Viewbox.RenderTransform>
+                                            <RotateTransform Angle="0"/>
+                                        </Viewbox.RenderTransform>
+                                        <Path x:Name="iconPath"
+                                              Data="{Binding IconPathData}"
+                                              Stroke="{TemplateBinding Foreground}"
+                                              StrokeThickness="1.5"
+                                              StrokeLineJoin="Round"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              Fill="Transparent"
+                                              Width="20" Height="20"
+                                              Stretch="Uniform"/>
+                                    </Viewbox>
+
+                                    <!-- Title + Description -->
+                                    <StackPanel Grid.Column="1"
+                                                Margin="10,0,0,0"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{TemplateBinding Foreground}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <!-- Active dot indicator -->
+                                    <Ellipse x:Name="activeDot"
+                                             Grid.Column="2"
+                                             Width="10"
+                                             Height="10"
+                                             Fill="{DynamicResource AccentBrush}"
+                                             Visibility="Collapsed"
+                                             Margin="0,0,6,0">
+                                        <Ellipse.Effect>
+                                            <DropShadowEffect ShadowDepth="0"
+                                                              BlurRadius="8"
+                                                              Opacity="0.5"
+                                                              Color="#6faadd"/>
+                                        </Ellipse.Effect>
+                                    </Ellipse>
+                                </Grid>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceBrush}"/>
-                            </Trigger>
+                            <!-- ── Hover: background, accent bar expands, icon rocks ── -->
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <!-- Background fade → SurfaceBrush -->
+                                        <ColorAnimationUsingKeyFrames
+                                            Storyboard.TargetName="border"
+                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                            Duration="0:0:0.25">
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0" Value="Transparent"/>
+                                            <LinearColorKeyFrame KeyTime="0:0:0.25" Value="#0FFFFFFF"/>
+                                        </ColorAnimationUsingKeyFrames>
+                                        <!-- Accent bar: height 0→28 -->
+                                        <DoubleAnimation Storyboard.TargetName="accentBar"
+                                                         Storyboard.TargetProperty="Height"
+                                                         From="0" To="28"
+                                                         Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <!-- Icon: slight rock -3°→0° -->
+                                        <DoubleAnimation Storyboard.TargetName="iconViewbox"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                         From="-3" To="0"
+                                                         Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+
+                            <!-- ── Leave: reverse hover effects ── -->
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <!-- Background fade back to transparent (unless active) -->
+                                        <ColorAnimationUsingKeyFrames
+                                            Storyboard.TargetName="border"
+                                            Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                            Duration="0:0:0.25">
+                                            <DiscreteColorKeyFrame KeyTime="0:0:0" Value="#0FFFFFFF"/>
+                                            <LinearColorKeyFrame KeyTime="0:0:0.25" Value="Transparent"/>
+                                        </ColorAnimationUsingKeyFrames>
+                                        <!-- Accent bar: height → 0 -->
+                                        <DoubleAnimation Storyboard.TargetName="accentBar"
+                                                         Storyboard.TargetProperty="Height"
+                                                         From="28" To="0"
+                                                         Duration="0:0:0.25">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <!-- Icon: reset rotation -->
+                                        <DoubleAnimation Storyboard.TargetName="iconViewbox"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                         From="0" To="0"
+                                                         Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -95,49 +187,50 @@
         </Grid.RowDefinitions>
 
         <!-- ═══ Row 0 — Brand ═══ -->
-        <StackPanel Grid.Row="0" Margin="18,22,18,14">
+        <StackPanel Grid.Row="0" Margin="18,24,18,12">
             <StackPanel Orientation="Horizontal">
-                <!-- Logo icon with gradient background -->
-                <Border Width="42" Height="42"
-                        CornerRadius="12"
+                <!-- Logo with enhanced gradient -->
+                <Border Width="44" Height="44"
+                        CornerRadius="14"
                         VerticalAlignment="Center">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#6faadd" Offset="0"/>
-                            <GradientStop Color="#7c8bff" Offset="1"/>
+                            <GradientStop Color="#60a5fa" Offset="0"/>
+                            <GradientStop Color="#a78bfa" Offset="0.5"/>
+                            <GradientStop Color="#f472b6" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
                     <Border.Effect>
                         <DropShadowEffect ShadowDepth="0"
-                                          BlurRadius="12"
-                                          Opacity="0.4"
-                                          Color="#6faadd"/>
+                                          BlurRadius="16"
+                                          Opacity="0.5"
+                                          Color="#60a5fa"/>
                     </Border.Effect>
-                    <!-- Lightning bolt icon -->
                     <TextBlock Text="&#xE945;"
                                FontFamily="Segoe MDL2 Assets"
-                               FontSize="22"
+                               FontSize="24"
                                Foreground="White"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
                 </Border>
 
                 <!-- Brand text -->
-                <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="Claude Code"
-                               FontSize="16"
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Claude Console"
+                               FontSize="17"
                                FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                    <TextBlock Text="Manager"
-                               FontSize="12"
-                               Foreground="{StaticResource TextTertiaryBrush}"/>
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="配置管理中心"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
+                               Margin="0,2,0,0"/>
                 </StackPanel>
             </StackPanel>
 
-            <!-- Divider under brand -->
+            <!-- Divider -->
             <Rectangle Height="1"
-                       Fill="{StaticResource BorderDefaultBrush}"
-                       Margin="0,14,0,0"/>
+                       Fill="{DynamicResource BorderDividerBrush}"
+                       Margin="0,16,0,0"/>
         </StackPanel>
 
         <!-- ═══ Row 1 — Navigation ═══ -->
@@ -168,13 +261,41 @@
         <!-- ═══ Row 2 — Footer ═══ -->
         <StackPanel Grid.Row="2">
             <Rectangle Height="1"
-                       Fill="{StaticResource BorderDefaultBrush}"
-                       Margin="16,0"/>
+                       Fill="{DynamicResource BorderDividerBrush}"
+                       Margin="16,8,16,0"/>
+
+            <!-- Preferences section -->
+            <TextBlock Text="PREFERENCES"
+                       FontSize="10"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextTertiaryBrush}"
+                       Margin="16,12,16,2"
+                       Opacity="0.6"/>
+
+            <!-- Theme + Language toggles -->
+            <StackPanel x:Name="TogglePanel">
+                <Button x:Name="ThemeToggleButton"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        HorizontalContentAlignment="Stretch"
+                        Click="OnThemeToggleClick"/>
+                <Button x:Name="LangToggleButton"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        HorizontalContentAlignment="Stretch"
+                        Click="OnLanguageToggleClick"/>
+            </StackPanel>
+
+            <Rectangle Height="1"
+                       Fill="{DynamicResource BorderDividerBrush}"
+                       Margin="16,4,16,8"/>
 
             <!-- Version + update status -->
-            <StackPanel Margin="16,10,16,12">
-                <TextBlock FontSize="11"
-                           Foreground="{StaticResource TextTertiaryBrush}">
+            <StackPanel Margin="16,4,16,12">
+                <TextBlock FontSize="{DynamicResource FontSizeXs}"
+                           Foreground="{DynamicResource TextTertiaryBrush}">
                     <Run Text="{Binding CurrentVersionText, Mode=OneWay}"/>
                 </TextBlock>
                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -184,63 +305,91 @@
                             <Style TargetType="Ellipse">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding UpdateStatusText}" Value="已是最新">
-                                        <Setter Property="Fill" Value="{StaticResource StatusRunningBrush}"/>
+                                        <Setter Property="Fill" Value="{DynamicResource StatusSuccessBrush}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding UpdateStatusText}" Value="检查中…">
-                                        <Setter Property="Fill" Value="#999999"/>
+                                        <Setter Property="Fill" Value="{DynamicResource StatusWarningBrush}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding UpdateStatusText}" Value="发现新版本">
-                                        <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}"/>
+                                        <Setter Property="Fill" Value="{DynamicResource StatusErrorBrush}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Ellipse.Style>
                     </Ellipse>
                     <TextBlock Text="{Binding UpdateStatusText}"
-                               FontSize="11"
-                               Foreground="{StaticResource TextTertiaryBrush}"
+                               FontSize="{DynamicResource FontSizeXs}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
                                Margin="6,0,0,0"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Manual check button -->
+                <!-- Update check button -->
                 <Button Command="{Binding DoCheckUpdateCommand}"
-                        Background="Transparent"
-                        Foreground="{StaticResource TextTertiaryBrush}"
-                        BorderBrush="{StaticResource BorderDefaultBrush}"
-                        BorderThickness="1"
-                        Padding="10,5"
+                        HorizontalAlignment="Stretch"
                         Margin="0,8,0,0"
-                        Cursor="Hand"
-                        HorizontalAlignment="Left">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
-                        </Style>
-                    </Button.Resources>
+                        Cursor="Hand">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="border"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="6"
-                                    Padding="{TemplateBinding Padding}">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE72C;"
-                                               FontFamily="Segoe MDL2 Assets"
-                                               FontSize="12"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,6,0"/>
-                                    <TextBlock Text="检查更新"
-                                               FontSize="11"
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
+                            <Border x:Name="outer"
+                                    CornerRadius="8"
+                                    Padding="1"
+                                    Background="{DynamicResource AccentSubtleBrush}">
+                                <Border x:Name="inner"
+                                        CornerRadius="7"
+                                        Background="Transparent"
+                                        Padding="12,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="&#xE895;"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,10,0"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Check for Updates"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding UpdateStatusText}"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="2"
+                                                Background="{DynamicResource AccentBrush}"
+                                                CornerRadius="10"
+                                                MinWidth="8" Height="8"
+                                                VerticalAlignment="Center"
+                                                Margin="8,0,0,0">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding UpdateStatusText}" Value="已是最新">
+                                                            <Setter Property="Background" Value="{DynamicResource StatusSuccessBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding UpdateStatusText}" Value="检查中…">
+                                                            <Setter Property="Background" Value="{DynamicResource StatusWarningBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding UpdateStatusText}" Value="发现新版本">
+                                                            <Setter Property="Background" Value="{DynamicResource StatusErrorBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                    </Grid>
+                                </Border>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#14FFFFFF"/>
-                                    <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+                                    <Setter TargetName="inner" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

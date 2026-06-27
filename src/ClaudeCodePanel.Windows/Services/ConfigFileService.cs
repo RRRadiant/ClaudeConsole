@@ -126,7 +126,7 @@ public sealed class ConfigFileInfo
 
 // ─── Config file service ─────────────────────────────────
 
-public sealed class ConfigFileService
+public sealed class ConfigFileService : IConfigFileService
 {
     public static ConfigFileService Instance { get; } = new();
 

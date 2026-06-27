@@ -20,14 +20,14 @@
                 <Button x:Name="AddBtn" Grid.Column="1"
                         Click="OnAddServer"
                         HorizontalAlignment="Right" Cursor="Hand"
-                        Background="{StaticResource AccentBrush}"
+                        Background="{DynamicResource AccentBrush}"
                         BorderThickness="0"
                         Foreground="White" Padding="16,8"
                         VerticalAlignment="Center">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="20"/>
-                            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                         </Style>
                     </Button.Resources>
                     <StackPanel Orientation="Horizontal">

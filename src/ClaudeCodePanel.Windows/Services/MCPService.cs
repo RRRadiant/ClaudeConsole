@@ -5,20 +5,16 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Models;
 
 namespace ClaudeCodePanel.Windows.Services;
 
-public sealed class MCPService
+public sealed class MCPService : IMCPService
 {
     public static MCPService Instance { get; } = new();
 
-    private readonly HttpClient _httpClient;
-
-    private MCPService()
-    {
-        _httpClient = new HttpClient();
-    }
+    private MCPService() { }
 
     // ── Test Connection ─────────────────────────────────────
 
@@ -56,7 +52,7 @@ public sealed class MCPService
 
         try
         {
-            using var response = await _httpClient.SendAsync(request, cts.Token).ConfigureAwait(false);
+            using var response = await HttpClientFactory.Create().SendAsync(request, cts.Token).ConfigureAwait(false);
             var statusCode = (int)response.StatusCode;
 
             // SSE endpoints often return 4xx for GET (no session), but the server IS reachable
@@ -80,8 +76,6 @@ public sealed class MCPService
         if (string.IsNullOrWhiteSpace(config.Command))
             return MCPConnectionResult.Failure("命令不能为空");
 
-        // Build a simple test: run <command> --help and check exit code
-        // If the command is a Python script, skip --help (might hang)
         var testArgs = new List<string> { config.Command };
 
         bool isPython = config.Command.EndsWith(".py", StringComparison.OrdinalIgnoreCase)
@@ -90,7 +84,6 @@ public sealed class MCPService
         if (!isPython)
             testArgs.Add("--help");
 
-        // Use cmd.exe on Windows, /usr/bin/env on Unix
         string shell = Environment.OSVersion.Platform == PlatformID.Win32NT
             ? "cmd.exe"
             : "/usr/bin/env";
@@ -107,99 +100,50 @@ public sealed class MCPService
             }
         };
 
-        // On Windows, prepend /c to run the command through cmd.exe
         if (shell == "cmd.exe")
             process.StartInfo.ArgumentList.Add("/c");
 
         foreach (var arg in testArgs)
             process.StartInfo.ArgumentList.Add(arg);
 
-        // Merge environment variables
         foreach (var kvp in config.Env)
             process.StartInfo.Environment[kvp.Key] = kvp.Value;
 
-        var tcs = new TaskCompletionSource<MCPConnectionResult>();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-
-        // Capture stderr from async drain instead of sync ReadToEnd() in Exited handler
-        string? stderrOutput = null;
-
-        // Register timeout — dispose the registration to prevent resource leak
-        using var ctr = cts.Token.Register(() =>
-        {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                    tcs.TrySetResult(MCPConnectionResult.Success("命令可执行 (超时终止)"));
-                }
-            }
-            catch
-            {
-                // Process may have already exited
-            }
-        });
-
-        process.Exited += (_, _) =>
-        {
-            if (tcs.Task.IsCompleted)
-                return;
-
-            try
-            {
-                if (process.ExitCode == 0 || process.ExitCode == 1)
-                {
-                    // Exit 0 or 1 from --help both mean the binary was found and ran
-                    tcs.TrySetResult(MCPConnectionResult.Success("命令可执行"));
-                }
-                else
-                {
-                    var errMsg = (stderrOutput ?? "").Trim();
-                    if (string.IsNullOrEmpty(errMsg))
-                        errMsg = $"退出码 {process.ExitCode}";
-                    tcs.TrySetResult(MCPConnectionResult.Failure(errMsg));
-                }
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetResult(MCPConnectionResult.Failure(ex.Message));
-            }
-            finally
-            {
-                process.Dispose();
-            }
-        };
-
         try
         {
-            process.EnableRaisingEvents = true;
-
-            // Guard: if process already exited before we registered the handler,
-            // handle it synchronously to prevent event-handler leak
-            if (process.HasExited)
-            {
-                if (process.ExitCode == 0 || process.ExitCode == 1)
-                    return MCPConnectionResult.Success("命令可执行");
-                return MCPConnectionResult.Failure($"退出码 {process.ExitCode}");
-            }
-
             process.Start();
 
-            // Begin reading stdout/stderr asynchronously to avoid deadlocks
-            // Capture stderr into our field so the Exited handler can read it
-            _ = process.StandardOutput.ReadToEndAsync();
-            _ = Task.Run(async () =>
-            {
-                stderrOutput = await process.StandardError.ReadToEndAsync();
-            });
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
 
-            return await tcs.Task.ConfigureAwait(false);
+            var exitTask = process.WaitForExitAsync();
+            var delayTask = Task.Delay(TimeSpan.FromSeconds(8));
+
+            var completed = await Task.WhenAny(exitTask, delayTask).ConfigureAwait(false);
+            if (completed == delayTask)
+            {
+                try { process.Kill(entireProcessTree: true); } catch (Exception ex) { SharedHelpers.SafeLog("MCPService.TestStdioConnectionAsync.Kill", ex); }
+                return MCPConnectionResult.Success("命令可执行 (超时终止)");
+            }
+
+            await exitTask.ConfigureAwait(false);
+            var stderrOutput = (await stderrTask.ConfigureAwait(false)).Trim();
+
+            if (process.ExitCode == 0 || process.ExitCode == 1)
+                return MCPConnectionResult.Success("命令可执行");
+
+            var errMsg = stderrOutput;
+            if (string.IsNullOrEmpty(errMsg))
+                errMsg = $"退出码 {process.ExitCode}";
+            return MCPConnectionResult.Failure(errMsg);
         }
         catch (Exception ex)
         {
-            process.Dispose();
             return MCPConnectionResult.Failure(ex.Message);
+        }
+        finally
+        {
+            process.Dispose();
         }
     }
 }

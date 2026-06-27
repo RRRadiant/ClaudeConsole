@@ -1,0 +1,2 @@
+[permissions]
+allow = ["Edit", "Bash(cd \"D:\\桌面\\新建文件夹\\ClaudeCodeManager-Merged\\src\\ClaudeCodePanel.Windows\" && dotnet build -c Release 2>&1)", "Bash(powershell.exe -NoProfile -Command \"Get-Process -Name 'ClaudeConsole' -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 1; Remove-Item 'release','release2','release3','out' -Recurse -Force -ErrorAction SilentlyContinue; Write-Host 'cleaned'\")"]

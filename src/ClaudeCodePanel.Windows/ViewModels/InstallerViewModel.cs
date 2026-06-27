@@ -3,13 +3,14 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Services;
 
 namespace ClaudeCodePanel.Windows.ViewModels;
 
 public partial class InstallerViewModel : ObservableObject
 {
-    private readonly InstallerService _installer;
+    private readonly IInstallerService _installer;
 
     [ObservableProperty]
     private InstallerService.CliStatus _claudeStatus = new() { Installed = false };
@@ -26,14 +27,10 @@ public partial class InstallerViewModel : ObservableObject
     [ObservableProperty]
     private bool _showStatusMessage;
 
-    public InstallerViewModel(InstallerService? installerService = null)
+    public InstallerViewModel(IInstallerService? installerService = null)
     {
         _installer = installerService ?? InstallerService.Instance;
-        _ = RefreshStatusAsync().ContinueWith(t =>
-        {
-            if (t.IsFaulted && t.Exception != null)
-                Debug.WriteLine($"[InstallerViewModel] RefreshStatusAsync failed: {t.Exception.GetBaseException().Message}");
-        }, TaskScheduler.Default);
+        RefreshStatusAsync().SafeFireAndForget("InstallerViewModel.RefreshStatus");
     }
 
     [RelayCommand]
@@ -43,7 +40,10 @@ public partial class InstallerViewModel : ObservableObject
         {
             ClaudeStatus = await _installer.GetClaudeStatusAsync();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[InstallerViewModel] RefreshStatusAsync failed: {ex.Message}");
+        }
     }
 
     [RelayCommand]

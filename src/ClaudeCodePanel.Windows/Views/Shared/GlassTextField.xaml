@@ -26,7 +26,7 @@
             <Border x:Name="StrokeBorder"
                     CornerRadius="16"
                     BorderThickness="1"
-                    Background="#33000000"
+                    Background="{DynamicResource InputBackgroundBrush}"
                     ClipToBounds="True">
 
                 <Grid x:Name="ContentGrid"
@@ -41,15 +41,15 @@
                     <Grid Grid.Column="0">
                         <TextBlock x:Name="WatermarkBlock"
                                    IsHitTestVisible="False"
-                                   Foreground="{StaticResource TextTertiaryBrush}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
                                    VerticalAlignment="Center"
                                    Text=""
                                    Visibility="Collapsed"/>
 
                         <TextBox x:Name="InputTextBox"
                                  Background="Transparent"
-                                 Foreground="{StaticResource TextPrimaryBrush}"
-                                 CaretBrush="{StaticResource AccentBrush}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 CaretBrush="{DynamicResource AccentBrush}"
                                  BorderThickness="0"
                                  VerticalContentAlignment="Center"
                                  FontSize="14"
@@ -59,8 +59,8 @@
 
                         <PasswordBox x:Name="InputPasswordBox"
                                      Background="Transparent"
-                                     Foreground="{StaticResource TextPrimaryBrush}"
-                                     CaretBrush="{StaticResource AccentBrush}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     CaretBrush="{DynamicResource AccentBrush}"
                                      BorderThickness="0"
                                      VerticalContentAlignment="Center"
                                      FontSize="14"
@@ -76,7 +76,7 @@
                             Width="32" Height="32"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource TextSecondaryBrush}"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
                             FontFamily="Segoe MDL2 Assets"
                             FontSize="14"
                             Content="&#xE052;"
@@ -90,7 +90,7 @@
         <TextBlock x:Name="ErrorMessageBlock"
                    Grid.Row="1"
                    FontSize="13"
-                   Foreground="{StaticResource StatusErrorBrush}"
+                   Foreground="{DynamicResource StatusErrorBrush}"
                    Margin="16,5,0,0"
                    Visibility="Collapsed"/>
     </Grid>

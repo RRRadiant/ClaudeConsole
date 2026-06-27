@@ -25,11 +25,14 @@ public partial class APIConfigView : UserControl
 {
     // ── Constants ──────────────────────────────────────────────────────────
 
-    private static readonly Color AccentColor = Color.FromRgb(0x6f, 0xaa, 0xdd);   // #6faadd
-    private static readonly Color AccentBgColor = Color.FromArgb(0x14, 0x6f, 0xaa, 0xdd); // accent 8% opacity
-    private static readonly Color SecondaryTextColor = Color.FromRgb(0x99, 0x99, 0x99);
-    private static readonly Color TertiaryTextColor = Color.FromRgb(0x59, 0x59, 0x59);
     private static readonly Color DangerColor = Color.FromRgb(0xcf, 0x6b, 0x6b);   // #cf6b6b
+
+    /// <summary>Resolve a theme resource brush at runtime (theme-aware).</summary>
+    private static SolidColorBrush T(string key)
+    {
+        return (Application.Current?.TryFindResource(key) as SolidColorBrush)
+               ?? new SolidColorBrush(Colors.Gray);
+    }
 
     // ── State ──────────────────────────────────────────────────────────────
 
@@ -121,7 +124,7 @@ public partial class APIConfigView : UserControl
             {
                 Tag = provider,
                 Padding = new Thickness(12),
-                Background = new SolidColorBrush(isSelected ? AccentBgColor : Colors.Transparent),
+                Background = isSelected ? T("SelectionBackgroundBrush") : Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Cursor = System.Windows.Input.Cursors.Hand,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch
@@ -140,7 +143,7 @@ public partial class APIConfigView : UserControl
                 Text = provider.IconGlyph(),
                 FontFamily = new FontFamily("Segoe MDL2 Assets"),
                 FontSize = 18,
-                Foreground = new SolidColorBrush(isSelected ? AccentColor : SecondaryTextColor),
+                Foreground = isSelected ? T("AccentBrush") : T("TextSecondaryBrush"),
                 VerticalAlignment = VerticalAlignment.Center
             };
             Grid.SetColumn(icon, 0);
@@ -156,7 +159,7 @@ public partial class APIConfigView : UserControl
             {
                 Text = provider.DisplayName(),
                 FontSize = 17,
-                Foreground = new SolidColorBrush(Colors.White)
+                Foreground = T("TextPrimaryBrush")
             });
             var baseURL = provider.DefaultBaseURL();
             if (string.IsNullOrEmpty(baseURL))
@@ -165,7 +168,7 @@ public partial class APIConfigView : UserControl
             {
                 Text = baseURL,
                 FontSize = 12,
-                Foreground = new SolidColorBrush(SecondaryTextColor),
+                Foreground = T("TextSecondaryBrush"),
                 TextTrimming = TextTrimming.CharacterEllipsis
             });
             Grid.SetColumn(textStack, 1);
@@ -178,7 +181,7 @@ public partial class APIConfigView : UserControl
                 FontFamily = new FontFamily("Segoe MDL2 Assets"),
                 FontSize = 14,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(AccentColor),
+                Foreground = T("AccentBrush"),
                 VerticalAlignment = VerticalAlignment.Center,
                 Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed
             };
@@ -366,7 +369,7 @@ public partial class APIConfigView : UserControl
                         Text = "检测到的模型",
                         FontSize = 12,
                         FontWeight = FontWeights.SemiBold,
-                        Foreground = new SolidColorBrush(SecondaryTextColor),
+                        Foreground = T("TextSecondaryBrush"),
                         Margin = new Thickness(0, 4, 0, 4)
                     });
                     hasDetectedSection = true;
@@ -383,7 +386,7 @@ public partial class APIConfigView : UserControl
                 Text = "推荐模型",
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(SecondaryTextColor),
+                Foreground = T("TextSecondaryBrush"),
                 Margin = new Thickness(0, 4, 0, 4)
             });
 
@@ -409,8 +412,8 @@ public partial class APIConfigView : UserControl
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(12),
             Margin = new Thickness(0, 4, 0, 0),
-            Background = new SolidColorBrush(Color.FromArgb(0x0D, 0xFF, 0xFF, 0xFF)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x0F, 0xFF, 0xFF, 0xFF)),
+            Background = T("GlassCardBgBrush"),
+            BorderBrush = T("BorderCardBrush"),
             BorderThickness = new Thickness(1)
         };
 
@@ -425,7 +428,7 @@ public partial class APIConfigView : UserControl
             Text = model,
             FontSize = 15,
             FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Colors.White)
+            Foreground = T("TextPrimaryBrush")
         });
 
         var desc = ModelDescription(model);
@@ -435,7 +438,7 @@ public partial class APIConfigView : UserControl
             {
                 Text = desc,
                 FontSize = 12,
-                Foreground = new SolidColorBrush(SecondaryTextColor),
+                Foreground = T("TextSecondaryBrush"),
                 Margin = new Thickness(0, 3, 0, 0)
             });
         }
@@ -494,7 +497,7 @@ public partial class APIConfigView : UserControl
         {
             Text = model,
             FontSize = 16,
-            Foreground = new SolidColorBrush(Colors.White),
+            Foreground = T("TextPrimaryBrush"),
             VerticalAlignment = VerticalAlignment.Center
         };
 
@@ -508,7 +511,7 @@ public partial class APIConfigView : UserControl
             {
                 Text = desc,
                 FontSize = 12,
-                Foreground = new SolidColorBrush(SecondaryTextColor)
+                Foreground = T("TextSecondaryBrush")
             });
             Grid.SetColumn(modelStack, 0);
             grid.Children.Add(modelStack);
@@ -530,7 +533,7 @@ public partial class APIConfigView : UserControl
             },
             Background = Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Foreground = new SolidColorBrush(AccentColor),
+            Foreground = T("AccentBrush"),
             Cursor = System.Windows.Input.Cursors.Hand,
             Tag = model,
             VerticalAlignment = VerticalAlignment.Center

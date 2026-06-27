@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+
+  <!-- Sidebar -->
+  <data name="Sidebar.Dashboard" xml:space="preserve"><value>概览</value></data>
+  <data name="Sidebar.DashboardDesc" xml:space="preserve"><value>系统状态与概览</value></data>
+  <data name="Sidebar.ApiConfig" xml:space="preserve"><value>API 配置</value></data>
+  <data name="Sidebar.ApiConfigDesc" xml:space="preserve"><value>配置 API 密钥与模型</value></data>
+  <data name="Sidebar.ConfigEditor" xml:space="preserve"><value>配置文件</value></data>
+  <data name="Sidebar.ConfigEditorDesc" xml:space="preserve"><value>编辑与管理配置文件</value></data>
+  <data name="Sidebar.McpManager" xml:space="preserve"><value>MCP 服务器</value></data>
+  <data name="Sidebar.McpManagerDesc" xml:space="preserve"><value>管理 MCP 服务器连接</value></data>
+  <data name="Sidebar.SkillManager" xml:space="preserve"><value>技能</value></data>
+  <data name="Sidebar.SkillManagerDesc" xml:space="preserve"><value>管理 Claude Code 技能</value></data>
+  <data name="Sidebar.Installer" xml:space="preserve"><value>安装器</value></data>
+  <data name="Sidebar.InstallerDesc" xml:space="preserve"><value>安装和管理 Claude Code CLI</value></data>
+  <data name="Sidebar.EnvCheck" xml:space="preserve"><value>环境检测</value></data>
+  <data name="Sidebar.EnvCheckDesc" xml:space="preserve"><value>检测开发环境依赖</value></data>
+
+  <!-- Brand -->
+  <data name="Brand.Title" xml:space="preserve"><value>Claude Console</value></data>
+  <data name="Brand.Subtitle" xml:space="preserve"><value>配置管理中心</value></data>
+
+  <!-- Theme -->
+  <data name="Theme.Dark" xml:space="preserve"><value>深色模式</value></data>
+  <data name="Theme.DarkHint" xml:space="preserve"><value>点击切换浅色</value></data>
+  <data name="Theme.Light" xml:space="preserve"><value>浅色模式</value></data>
+  <data name="Theme.LightHint" xml:space="preserve"><value>点击切换深色</value></data>
+
+  <!-- Update -->
+  <data name="Update.Checking" xml:space="preserve"><value>检查中…</value></data>
+  <data name="Update.UpToDate" xml:space="preserve"><value>已是最新</value></data>
+  <data name="Update.NewVersion" xml:space="preserve"><value>发现新版本</value></data>
+  <data name="Update.CheckButton" xml:space="preserve"><value>检查更新</value></data>
+  <data name="Update.Download" xml:space="preserve"><value>下载更新</value></data>
+  <data name="Update.Banner" xml:space="preserve"><value>发现新版本 {0} — 点击下载更新</value></data>
+
+  <!-- General -->
+  <data name="General.Installed" xml:space="preserve"><value>已安装</value></data>
+  <data name="General.NotInstalled" xml:space="preserve"><value>未安装</value></data>
+  <data name="General.Enabled" xml:space="preserve"><value>已启用</value></data>
+  <data name="General.Disabled" xml:space="preserve"><value>已禁用</value></data>
+  <data name="General.Running" xml:space="preserve"><value>运行中</value></data>
+  <data name="General.Stopped" xml:space="preserve"><value>已停止</value></data>
+  <data name="General.Save" xml:space="preserve"><value>保存</value></data>
+  <data name="General.Cancel" xml:space="preserve"><value>取消</value></data>
+
+  <!-- Language -->
+  <data name="Language.Chinese" xml:space="preserve"><value>中文</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+</root>

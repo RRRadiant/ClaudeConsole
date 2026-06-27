@@ -99,27 +99,44 @@ namespace ClaudeCodePanel.Windows.Views.Shared
 
         // ── Liquid Glass Color Constants ──────────────────────────────────
 
-        private static readonly Color AccentColor = Color.FromRgb(0x6f, 0xaa, 0xdd);
-        private static readonly Color AccentHoverColor = Color.FromRgb(0x8b, 0xba, 0xff);
         private static readonly Color DangerColor = Color.FromRgb(0xcf, 0x6b, 0x6b);
 
-        // Primary: rgba(255,255,255,0.06) bg, hover stronger
-        private static readonly Color PrimaryBgColor = Color.FromArgb(0x0F, 0xFF, 0xFF, 0xFF);
-        private static readonly Color PrimaryHoverBgColor = Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF);
+        /// <summary>Resolve a theme resource brush at runtime (theme-aware).</summary>
+        private static Color ThemeColor(string key, Color fallback)
+        {
+            return (Application.Current?.TryFindResource(key) as SolidColorBrush)?.Color ?? fallback;
+        }
+
+        // Primary: surface bg
+        private static Color PrimaryBgColor => ThemeColor("SurfaceBrush",
+            Color.FromArgb(0x0F, 0xFF, 0xFF, 0xFF));
+        private static Color PrimaryHoverBgColor => ThemeColor("SurfaceStrongBrush",
+            Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
         // Accent: rgba(100,180,255,0.08) bg
-        private static readonly Color AccentBgColor = Color.FromArgb(0x14, 0x64, 0xb4, 0xff);
-        private static readonly Color AccentHoverBgColor = Color.FromArgb(0x1E, 0x64, 0xb4, 0xff);
+        private static Color AccentBgColor => ThemeColor("AccentSubtleBrush",
+            Color.FromArgb(0x14, 0x64, 0xb4, 0xff));
+        private static Color AccentHoverBgColor => Color.FromArgb(0x1E, 0x64, 0xb4, 0xff);
         // Danger: rgba(207,107,107,0.04) bg
-        private static readonly Color DangerBgColor = Color.FromArgb(0x0A, 0xcf, 0x6b, 0x6b);
-        private static readonly Color DangerHoverBgColor = Color.FromArgb(0x1A, 0xcf, 0x6b, 0x6b);
+        private static Color DangerBgColor => Color.FromArgb(0x0A, 0xcf, 0x6b, 0x6b);
+        private static Color DangerHoverBgColor => Color.FromArgb(0x1A, 0xcf, 0x6b, 0x6b);
 
         // Borders
-        private static readonly Color BorderDefaultColor = Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF);
-        private static readonly Color BorderHoverColor = Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF);
-        private static readonly Color BorderAccentColor = Color.FromArgb(0x33, 0x64, 0xb4, 0xff);
-        private static readonly Color BorderAccentHoverColor = Color.FromArgb(0x4D, 0x64, 0xb4, 0xff);
-        private static readonly Color BorderDangerColor = Color.FromArgb(0x40, 0xcf, 0x6b, 0x6b);
-        private static readonly Color BorderDangerHoverColor = Color.FromArgb(0x73, 0xcf, 0x6b, 0x6b);
+        private static Color BorderDefaultColor => ThemeColor("BorderDefaultBrush",
+            Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));
+        private static Color BorderHoverColor => ThemeColor("BorderStrongBrush",
+            Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF));
+        private static Color BorderAccentColor => ThemeColor("BorderAccentBrush",
+            Color.FromArgb(0x33, 0x64, 0xb4, 0xff));
+        private static Color BorderAccentHoverColor => Color.FromArgb(0x4D, 0x64, 0xb4, 0xff);
+        private static Color BorderDangerColor => Color.FromArgb(0x40, 0xcf, 0x6b, 0x6b);
+        private static Color BorderDangerHoverColor => Color.FromArgb(0x73, 0xcf, 0x6b, 0x6b);
+
+        // Foreground helpers
+        private static Color PrimaryFgColor => ThemeColor("TextPrimaryBrush", Colors.White);
+        private static Color SecondaryFgColor => ThemeColor("TextSecondaryBrush",
+            Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF));
+        private static Color AccentFgColor => ThemeColor("AccentBrush",
+            Color.FromArgb(0xF2, 0xb4, 0xd2, 0xff));
 
         // ── Internal State ────────────────────────────────────────────────
 
@@ -136,7 +153,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
 
             _backgroundBrush = new SolidColorBrush(PrimaryBgColor);
             _borderBrush = new SolidColorBrush(BorderDefaultColor);
-            _foregroundBrush = new SolidColorBrush(Colors.White);
+            _foregroundBrush = new SolidColorBrush(PrimaryFgColor);
 
             RootBorder.Background = _backgroundBrush;
             RootBorder.BorderBrush = _borderBrush;
@@ -248,7 +265,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                         ? Color.FromArgb(0x0A, 0xFF, 0xFF, 0xFF)
                         : Color.FromArgb(0x05, 0xFF, 0xFF, 0xFF);
                     borderTarget = _isHovered ? BorderHoverColor : BorderDefaultColor;
-                    fgTarget = Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF); // text-2
+                    fgTarget = SecondaryFgColor;
                     break;
 
                 case "Ghost":
@@ -256,13 +273,13 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                         ? Color.FromArgb(0x0A, 0xFF, 0xFF, 0xFF)
                         : Colors.Transparent;
                     borderTarget = _isHovered ? BorderDefaultColor : Colors.Transparent;
-                    fgTarget = Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF); // text-2
+                    fgTarget = SecondaryFgColor;
                     break;
 
                 case "Accent":
                     bgTarget = _isHovered ? AccentHoverBgColor : AccentBgColor;
                     borderTarget = _isHovered ? BorderAccentHoverColor : BorderAccentColor;
-                    fgTarget = Color.FromArgb(0xF2, 0xb4, 0xd2, 0xff);
+                    fgTarget = AccentFgColor;
                     break;
 
                 case "Danger":
@@ -274,7 +291,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                 default: // "Primary"
                     bgTarget = _isHovered ? PrimaryHoverBgColor : PrimaryBgColor;
                     borderTarget = _isHovered ? BorderHoverColor : BorderDefaultColor;
-                    fgTarget = Colors.White;
+                    fgTarget = PrimaryFgColor;
                     break;
             }
 
@@ -335,17 +352,17 @@ namespace ClaudeCodePanel.Windows.Views.Shared
 
         private void AnimateBackgroundTo(Color targetColor)
         {
-            AnimateColor(_backgroundBrush, targetColor, 160);
+            AnimateColor(_backgroundBrush, targetColor, 200);
         }
 
         private void AnimateBorderTo(Color targetColor)
         {
-            AnimateColor(_borderBrush, targetColor, 160);
+            AnimateColor(_borderBrush, targetColor, 200);
         }
 
         private void AnimateForegroundTo(Color targetColor)
         {
-            AnimateColor(_foregroundBrush, targetColor, 160);
+            AnimateColor(_foregroundBrush, targetColor, 200);
         }
 
         private static void AnimateColor(SolidColorBrush? brush, Color targetColor, int durationMs)
@@ -364,22 +381,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             brush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
         }
 
-        private void AnimatePressScale(double targetScale)
-        {
-            if (PressScale == null) return;
-
-            PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-            PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-
-            var duration = TimeSpan.FromMilliseconds(80);
-            var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
-
-            var animX = new DoubleAnimation(PressScale.ScaleX, targetScale, duration) { EasingFunction = easing };
-            var animY = new DoubleAnimation(PressScale.ScaleY, targetScale, duration) { EasingFunction = easing };
-
-            PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
-            PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
-        }
+        // ── Old AnimatePressScale removed — using the version in Ripple section ──
 
         // ── Mouse Event Handlers ──────────────────────────────────────────
 
@@ -399,6 +401,11 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (IsDisabled) return;
+
+            // ── Ripple effect ──
+            CreateRipple(e.GetPosition(RootBorder));
+
+            // ── Press scale (100 ms) ──
             AnimatePressScale(0.97);
             RootBorder.CaptureMouse();
         }
@@ -408,13 +415,129 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             RootBorder.ReleaseMouseCapture();
 
             if (IsDisabled) return;
-            AnimatePressScale(1.0);
+
+            // ── Elastic restore (200 ms, BackEase) ──
+            AnimateRestoreScale();
 
             var command = Command;
             if (RootBorder.IsMouseOver && command != null && command.CanExecute(CommandParameter))
             {
                 command.Execute(CommandParameter);
             }
+        }
+
+        // ── Ripple Effect ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Creates a circular ripple at the click position.
+        /// The ellipse scales from 0→3 and fades opacity 0.3→0 over 400 ms,
+        /// then is removed from the visual tree.
+        /// </summary>
+        private void CreateRipple(Point clickPosition)
+        {
+            var variant = Variant ?? "Primary";
+
+            // Determine ripple fill based on variant
+            Color rippleColor = variant switch
+            {
+                "Accent"  => Color.FromArgb(0x4D, 0x6f, 0xaa, 0xdd), // Accent semi-transparent
+                "Danger"  => Color.FromArgb(0x4D, 0xcf, 0x6b, 0x6b), // Red semi-transparent
+                _         => Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF), // White semi-transparent (Primary, Secondary, Ghost)
+            };
+
+            var ripple = new System.Windows.Shapes.Ellipse
+            {
+                Width = 30,
+                Height = 30,
+                Fill = new SolidColorBrush(rippleColor),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(clickPosition.X - 15, clickPosition.Y - 15, 0, 0),
+                IsHitTestVisible = false,
+                RenderTransformOrigin = new Point(0.5, 0.5)
+            };
+
+            var scaleTransform = new ScaleTransform(0, 0);
+            ripple.RenderTransform = scaleTransform;
+
+            // Add ripple to the main grid (which is inside ClipToBounds Border)
+            var grid = RootBorder.Child as Grid;
+            grid?.Children.Add(ripple);
+
+            // ── Animate: scale 0→3, opacity 0.3→0 ──
+            var sb = new Storyboard();
+
+            var scaleXAnim = new DoubleAnimation(0, 3, TimeSpan.FromMilliseconds(400))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(scaleXAnim, ripple);
+            Storyboard.SetTargetProperty(scaleXAnim,
+                new PropertyPath("(UIElement.RenderTransform).(ScaleTransform.ScaleX)"));
+            sb.Children.Add(scaleXAnim);
+
+            var scaleYAnim = new DoubleAnimation(0, 3, TimeSpan.FromMilliseconds(400))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(scaleYAnim, ripple);
+            Storyboard.SetTargetProperty(scaleYAnim,
+                new PropertyPath("(UIElement.RenderTransform).(ScaleTransform.ScaleY)"));
+            sb.Children.Add(scaleYAnim);
+
+            var fadeAnim = new DoubleAnimation(0.3, 0.0, TimeSpan.FromMilliseconds(400))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(fadeAnim, ripple);
+            Storyboard.SetTargetProperty(fadeAnim, new PropertyPath(UIElement.OpacityProperty));
+            sb.Children.Add(fadeAnim);
+
+            sb.Completed += (_, _) =>
+            {
+                if (ripple.Parent is Panel p)
+                    p.Children.Remove(ripple);
+            };
+
+            ripple.Opacity = 0.3;
+            sb.Begin();
+        }
+
+        // ── Press / Restore Scale Animation ───────────────────────────────
+
+        private void AnimatePressScale(double targetScale)
+        {
+            if (PressScale == null) return;
+
+            PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+
+            var duration = TimeSpan.FromMilliseconds(100); // 100 ms press
+            var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
+
+            var animX = new DoubleAnimation(PressScale.ScaleX, targetScale, duration) { EasingFunction = easing };
+            var animY = new DoubleAnimation(PressScale.ScaleY, targetScale, duration) { EasingFunction = easing };
+
+            PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
+            PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
+        }
+
+        /// <summary>Elastic restore to 1.0 with BackEase (200 ms).</summary>
+        private void AnimateRestoreScale()
+        {
+            if (PressScale == null) return;
+
+            PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+
+            var duration = TimeSpan.FromMilliseconds(200);
+            var easing = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.3 };
+
+            var animX = new DoubleAnimation(PressScale.ScaleX, 1.0, duration) { EasingFunction = easing };
+            var animY = new DoubleAnimation(PressScale.ScaleY, 1.0, duration) { EasingFunction = easing };
+
+            PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
+            PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
         }
     }
 }
