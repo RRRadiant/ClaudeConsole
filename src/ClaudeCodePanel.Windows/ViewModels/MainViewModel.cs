@@ -89,7 +89,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>Current app version string (e.g. "v1.0.0").</summary>
     [ObservableProperty]
-    private string _currentVersionText = "v1.1.0";
+    private string _currentVersionText = "v1.1.1";
 
     /// <summary>Update status shown in the sidebar: 检查中… / 已是最新 / 发现新版本.</summary>
     [ObservableProperty]

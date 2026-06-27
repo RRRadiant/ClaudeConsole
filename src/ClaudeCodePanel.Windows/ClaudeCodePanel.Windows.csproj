@@ -9,7 +9,7 @@
     <AssemblyName>ClaudeConsole</AssemblyName>
     <RootNamespace>ClaudeCodePanel.Windows</RootNamespace>
     <PlatformTarget>x64</PlatformTarget>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Authors>Claude Code Panel</Authors>
     <Description>Claude Code Configuration Panel for Windows</Description>
   </PropertyGroup>

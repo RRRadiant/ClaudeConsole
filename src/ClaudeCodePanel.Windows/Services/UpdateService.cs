@@ -22,7 +22,7 @@ public sealed class UpdateService
     // ──────────────────────────────────────────────────────────────
 
     /// <summary>当前版本 — 发布新版本时记得同步更新 csproj 中的 Version</summary>
-    private static readonly Version CurrentVersion = new Version(1, 1, 0);
+    private static readonly Version CurrentVersion = new Version(1, 1, 1);
 
     private static readonly string ReleasesApiUrl =
         $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/latest";
