@@ -25,14 +25,14 @@ public class ConfigEditorViewModelTests
                 File.GetLastWriteTimeUtc(filePath),
                 new FileInfo(filePath).Length);
 
-	            vm.SelectFile(fileInfo);
-	            vm.FileContent = "{\n  \"key\": \"local\"\n}";
-	
-	            await File.WriteAllTextAsync(filePath, "{\n  \"key\": \"remote\"\n}");
-	            File.SetLastWriteTimeUtc(filePath, File.GetLastWriteTimeUtc(filePath).AddSeconds(2));
-	
-	            await vm.SaveChangesAsync();
-	            Assert.True(vm.HasConflict);
+            vm.SelectFile(fileInfo);
+            vm.FileContent = "{\n  \"key\": \"local\"\n}";
+
+            await File.WriteAllTextAsync(filePath, "{\n  \"key\": \"remote\"\n}");
+            File.SetLastWriteTimeUtc(filePath, File.GetLastWriteTimeUtc(filePath).AddSeconds(2));
+
+            await vm.SaveChangesAsync();
+            Assert.True(vm.HasConflict);
 
             vm.ResolveConflict(useRemote: false);
 
