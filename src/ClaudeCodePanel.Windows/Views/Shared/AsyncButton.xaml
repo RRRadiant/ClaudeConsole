@@ -4,7 +4,7 @@
 
     <Border x:Name="RootBorder"
             Height="44"
-            CornerRadius="22"
+            CornerRadius="{DynamicResource RadiusPill}"
             ClipToBounds="True"
             Cursor="Hand"
             MouseLeftButtonDown="OnMouseLeftButtonDown"

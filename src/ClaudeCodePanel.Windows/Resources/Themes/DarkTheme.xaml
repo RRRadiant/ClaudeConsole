@@ -30,9 +30,19 @@
     <!-- Window Background Gradient — used by MainWindow BgBorder -->
     <RadialGradientBrush x:Key="WindowBgBrush" Center="0.5,0" RadiusX="0.8" RadiusY="0.6">
         <RadialGradientBrush.GradientStops>
-            <GradientStop Color="#0F1A38" Offset="0"/>
-            <GradientStop Color="#080D1F" Offset="1"/>
+            <GradientStop Color="#0C1731" Offset="0"/>
+            <GradientStop Color="#070C1B" Offset="1"/>
         </RadialGradientBrush.GradientStops>
+    </RadialGradientBrush>
+
+    <RadialGradientBrush x:Key="WindowAmbientPrimaryBrush" Center="0.84,0.1" RadiusX="0.5" RadiusY="0.5">
+        <GradientStop Color="#143E6A9A" Offset="0"/>
+        <GradientStop Color="#003E6A9A" Offset="1"/>
+    </RadialGradientBrush>
+
+    <RadialGradientBrush x:Key="WindowAmbientSecondaryBrush" Center="0.1,0.9" RadiusX="0.45" RadiusY="0.45">
+        <GradientStop Color="#0CFFFFFF" Offset="0"/>
+        <GradientStop Color="#00FFFFFF" Offset="1"/>
     </RadialGradientBrush>
 
     <!-- Background Depth Layers (dark navy) -->
@@ -69,6 +79,7 @@
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#8bbaff"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#1464b4ff"/>         <!-- rgba(100,180,255,0.08) -->
     <SolidColorBrush x:Key="AccentGlowBrush" Color="#4064b4ff"/>          <!-- rgba(100,180,255,0.25) -->
+    <SolidColorBrush x:Key="TextOnAccentBrush" Color="#ffffff"/>
 
     <!-- Text Colors -->
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2FFFFFF"/>          <!-- rgba(255,255,255,0.95) -->
@@ -106,13 +117,16 @@
     <!-- ============================================================
          Corner Radius Scale
          ============================================================ -->
-    <CornerRadius x:Key="RadiusSm">4</CornerRadius>
-    <CornerRadius x:Key="RadiusMd">6</CornerRadius>
-    <CornerRadius x:Key="RadiusLg">8</CornerRadius>
-    <CornerRadius x:Key="RadiusXl">12</CornerRadius>
-    <CornerRadius x:Key="Radius2xl">16</CornerRadius>
-    <CornerRadius x:Key="Radius3xl">24</CornerRadius>
-    <CornerRadius x:Key="Radius4xl">32</CornerRadius>
+    <CornerRadius x:Key="RadiusMicro">2</CornerRadius>
+    <CornerRadius x:Key="RadiusXs">8</CornerRadius>
+    <CornerRadius x:Key="RadiusSm">12</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">16</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">20</CornerRadius>
+    <CornerRadius x:Key="RadiusXl">24</CornerRadius>
+    <CornerRadius x:Key="Radius2xl">28</CornerRadius>
+    <CornerRadius x:Key="Radius3xl">32</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">22</CornerRadius>
+    <CornerRadius x:Key="RadiusWindow">26</CornerRadius>
 
     <!-- ============================================================
          Typography Scale

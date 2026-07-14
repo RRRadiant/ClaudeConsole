@@ -20,14 +20,14 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border"
                                 Padding="12,10"
-                                CornerRadius="16"
+                                CornerRadius="{DynamicResource RadiusMd}"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}">
                             <Grid>
                                 <Border x:Name="accentBar"
                                         Width="3"
-                                        CornerRadius="2"
+                                        CornerRadius="{DynamicResource RadiusMicro}"
                                         Background="{DynamicResource AccentBrush}"
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Stretch"
@@ -45,7 +45,7 @@
                                             Grid.Column="0"
                                             Width="34"
                                             Height="34"
-                                            CornerRadius="11"
+                                            CornerRadius="{DynamicResource RadiusSm}"
                                             Background="{DynamicResource SurfaceBrush}"
                                             BorderBrush="{DynamicResource BorderDefaultBrush}"
                                             BorderThickness="1">
@@ -116,7 +116,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border"
-                                CornerRadius="12"
+                                CornerRadius="{DynamicResource RadiusSm}"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}">
@@ -143,7 +143,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border"
-                                CornerRadius="16"
+                                CornerRadius="{DynamicResource RadiusMd}"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
@@ -169,7 +169,7 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                CornerRadius="24"
+                CornerRadius="{DynamicResource RadiusXl}"
                 Background="{DynamicResource GlassCardBgBrush}"
                 BorderBrush="{DynamicResource BorderDefaultBrush}"
                 BorderThickness="1"
@@ -178,12 +178,12 @@
                 <StackPanel Orientation="Horizontal">
                     <Border Width="48"
                             Height="48"
-                            CornerRadius="16">
+                            CornerRadius="{DynamicResource RadiusMd}">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#7D89FF" Offset="0"/>
-                                <GradientStop Color="#8B6DFF" Offset="0.58"/>
-                                <GradientStop Color="#C285FF" Offset="1"/>
+                                <GradientStop Color="#4F8CFF" Offset="0"/>
+                                <GradientStop Color="#59B2FF" Offset="0.58"/>
+                                <GradientStop Color="#69D3D8" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
                         <TextBlock Text="&#xE945;"
@@ -209,7 +209,7 @@
 
                 <Border Margin="0,16,0,0"
                         Padding="14"
-                        CornerRadius="18"
+                        CornerRadius="{DynamicResource RadiusLg}"
                         Background="{DynamicResource SurfaceBrush}"
                         BorderBrush="{DynamicResource BorderDefaultBrush}"
                         BorderThickness="1">
@@ -239,7 +239,7 @@
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
-                    CornerRadius="24"
+                    CornerRadius="{DynamicResource RadiusXl}"
                     Background="{DynamicResource GlassCardBgBrush}"
                     BorderBrush="{DynamicResource BorderDefaultBrush}"
                     BorderThickness="1"
@@ -267,7 +267,7 @@
             </Border>
 
             <StackPanel Grid.Row="1" Margin="0,14,0,0">
-                <Border CornerRadius="24"
+                <Border CornerRadius="{DynamicResource RadiusXl}"
                         Background="{DynamicResource GlassCardBgBrush}"
                         BorderBrush="{DynamicResource BorderDefaultBrush}"
                         BorderThickness="1"
@@ -299,7 +299,7 @@
 
                         <Border Margin="0,8,0,0"
                                 Padding="12"
-                                CornerRadius="16"
+                                CornerRadius="{DynamicResource RadiusMd}"
                                 Background="{DynamicResource SurfaceBrush}"
                                 BorderBrush="{DynamicResource BorderDefaultBrush}"
                                 BorderThickness="1">
@@ -387,7 +387,7 @@
         </Grid>
 
         <Border Grid.Row="2"
-                CornerRadius="20"
+                CornerRadius="{DynamicResource RadiusLg}"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderDefaultBrush}"
                 BorderThickness="1"

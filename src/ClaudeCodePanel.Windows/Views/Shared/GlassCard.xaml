@@ -24,7 +24,7 @@
                 <ControlTemplate TargetType="{x:Type shared:GlassCard}">
                     <!-- Outer border: carries corner radius, clips content, handles hover/press -->
                     <Border x:Name="OuterBorder"
-                            CornerRadius="32"
+                            CornerRadius="{DynamicResource Radius3xl}"
                             ClipToBounds="True"
                             RenderTransformOrigin="0.5,0.5">
                         <Border.RenderTransform>
@@ -33,7 +33,7 @@
 
                         <!-- Inner border: provides the stroke + background -->
                         <Border x:Name="StrokeBorder"
-                                CornerRadius="32"
+                                CornerRadius="{DynamicResource Radius3xl}"
                                 BorderThickness="1"
                                 ClipToBounds="True">
 
@@ -52,9 +52,9 @@
                                         VerticalAlignment="Top"
                                         HorizontalAlignment="Left"
                                         Width="80" Height="60"
-                                        CornerRadius="0,0,40,0"
-                                        Margin="-10,-10,0,0"
-                                        Opacity="0.3">
+                                        CornerRadius="{DynamicResource RadiusXl}"
+                                        Margin="-10,-8,0,0"
+                                        Opacity="0.22">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                             <GradientStop Color="#15FFFFFF" Offset="0"/>

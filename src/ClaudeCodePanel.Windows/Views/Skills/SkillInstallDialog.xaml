@@ -9,7 +9,7 @@
 
         <Border HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                CornerRadius="16"
+                CornerRadius="{DynamicResource RadiusMd}"
                 Background="{DynamicResource OverlayBackgroundBrush}"
                 BorderBrush="{DynamicResource BorderStrongBrush}"
                 BorderThickness="1"
@@ -33,11 +33,11 @@
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
                                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ToggleButton">
-                                            <Border x:Name="border" CornerRadius="20"
+                                            <Border x:Name="border" CornerRadius="{DynamicResource RadiusLg}"
                                                     Background="{TemplateBinding Background}"
                                                     Padding="{TemplateBinding Padding}">
                                                 <ContentPresenter HorizontalAlignment="Center"
@@ -70,7 +70,7 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ToggleButton">
-                                            <Border x:Name="border" CornerRadius="20"
+                                            <Border x:Name="border" CornerRadius="{DynamicResource RadiusLg}"
                                                     Background="{TemplateBinding Background}"
                                                     Padding="{TemplateBinding Padding}">
                                                 <ContentPresenter HorizontalAlignment="Center"
@@ -79,7 +79,7 @@
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsChecked" Value="True">
                                                     <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -113,11 +113,11 @@
                             Margin="12,0,0,0"
                             Background="{DynamicResource AccentBrush}"
                             BorderThickness="0"
-                            Foreground="White"
+                            Foreground="{DynamicResource TextOnAccentBrush}"
                             Padding="22,10">
                         <Button.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="22"/>
+                                <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}"/>
                                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                             </Style>
                         </Button.Resources>

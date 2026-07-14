@@ -4,7 +4,7 @@
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared">
 
     <Border x:Name="RootBorder"
-            CornerRadius="16"
+            CornerRadius="{DynamicResource RadiusMd}"
             ClipToBounds="False">
 
         <Border.Effect>
@@ -16,7 +16,7 @@
         </Border.Effect>
 
         <Border x:Name="StrokeBorder"
-                CornerRadius="16"
+                CornerRadius="{DynamicResource RadiusMd}"
                 BorderThickness="1"
                 Background="{DynamicResource InputBackgroundBrush}"
                 ClipToBounds="True">

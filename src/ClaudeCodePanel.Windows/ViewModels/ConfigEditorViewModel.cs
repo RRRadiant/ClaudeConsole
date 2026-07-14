@@ -16,7 +16,7 @@ namespace ClaudeCodePanel.Windows.ViewModels;
 /// </summary>
 public partial class ConfigEditorViewModel : ObservableObject
 {
-    private readonly ConfigFileService _configFileService;
+    private readonly IConfigFileService _configFileService;
     private DateTime? _lastSavedMtime;
 
     // ──────────────────────────────────────────────
@@ -54,7 +54,7 @@ public partial class ConfigEditorViewModel : ObservableObject
     //  Constructor
     // ──────────────────────────────────────────────
 
-    public ConfigEditorViewModel(ConfigFileService? configFileService = null)
+    public ConfigEditorViewModel(IConfigFileService? configFileService = null)
     {
         _configFileService = configFileService ?? ConfigFileService.Instance;
     }
@@ -137,9 +137,9 @@ public partial class ConfigEditorViewModel : ObservableObject
     /// For other files: writes content directly.
     /// </summary>
     [RelayCommand]
-    public async Task SaveChangesAsync()
+    public Task SaveChangesAsync()
     {
-        if (SelectedFile == null) return;
+        if (SelectedFile == null) return Task.CompletedTask;
 
         try
         {
@@ -168,13 +168,14 @@ public partial class ConfigEditorViewModel : ObservableObject
             }
             else
             {
-                await File.WriteAllTextAsync(SelectedFile.Path, FileContent);
+                _configFileService.WriteText(FileContent, SelectedFile.Path, _lastSavedMtime);
             }
 
             // Update tracking state after successful save
             OriginalContent = FileContent;
             IsModified = false;
             ErrorMessage = null;
+            HasConflict = false;
 
             var fileInfo = new FileInfo(SelectedFile.Path);
             _lastSavedMtime = fileInfo.LastWriteTimeUtc;
@@ -195,6 +196,8 @@ public partial class ConfigEditorViewModel : ObservableObject
         {
             ErrorMessage = ex.Message;
         }
+
+        return Task.CompletedTask;
     }
 
     // ──────────────────────────────────────────────

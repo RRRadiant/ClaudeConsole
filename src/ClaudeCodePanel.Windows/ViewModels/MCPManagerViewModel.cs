@@ -186,6 +186,14 @@ public partial class MCPManagerViewModel : ObservableObject
     [RelayCommand]
     public void SaveServer()
     {
+        var resolvedProjectPath = ResolveProjectPath(NewProjectPath, NewServerType);
+        if (NewServerType is MCPServerType.Builtin or MCPServerType.Plugin &&
+            string.IsNullOrEmpty(resolvedProjectPath))
+        {
+            ErrorMessage = "Builtin/Plugin MCP 服务器必须指定项目路径。";
+            return;
+        }
+
         MCPServerConfig server;
         if (EditingServer != null)
         {
@@ -203,7 +211,7 @@ public partial class MCPManagerViewModel : ObservableObject
                     .Where(e => !string.IsNullOrEmpty(e.Key))
                     .ToDictionary(e => e.Key, e => e.Value)
                 : new Dictionary<string, string>();
-            server.ProjectPath = ResolveProjectPath(NewProjectPath, server.ServerType);
+            server.ProjectPath = resolvedProjectPath;
         }
         else
         {
@@ -222,11 +230,12 @@ public partial class MCPManagerViewModel : ObservableObject
                         .Where(e => !string.IsNullOrEmpty(e.Key))
                         .ToDictionary(e => e.Key, e => e.Value)
                     : new Dictionary<string, string>(),
-                ProjectPath = ResolveProjectPath(NewProjectPath, NewServerType)
+                ProjectPath = resolvedProjectPath
             };
             Servers.Add(server);
         }
 
+        ErrorMessage = null;
         PersistToClaudeJSONAsync().SafeFireAndForget("MCPManagerViewModel.SaveServer");
         ResetForm();
     }
@@ -319,7 +328,10 @@ public partial class MCPManagerViewModel : ObservableObject
             {
                 var projectPath = ResolveProjectPath(server.ProjectPath, server.ServerType);
                 if (string.IsNullOrEmpty(projectPath))
+                {
+                    ErrorMessage = "存在缺少项目路径的 Builtin/Plugin MCP 服务器，已跳过写入。";
                     continue;
+                }
                 touchedProjectPaths.Add(projectPath);
 
                 if (server.ServerType is MCPServerType.Builtin or MCPServerType.Plugin)
@@ -513,14 +525,12 @@ public partial class MCPManagerViewModel : ObservableObject
         }
     }
 
-    private static string? ResolveProjectPath(string? projectPath, MCPServerType serverType)
+    internal static string? ResolveProjectPath(string? projectPath, MCPServerType serverType)
     {
         var trimmed = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim();
         if (!string.IsNullOrEmpty(trimmed))
             return trimmed;
 
-        return serverType is MCPServerType.Builtin or MCPServerType.Plugin
-            ? Directory.GetCurrentDirectory()
-            : null;
+        return null;
     }
 }

@@ -69,7 +69,7 @@
                             Padding="14,7">
                         <Button.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="16"/>
+                                <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}"/>
                             </Style>
                         </Button.Resources>
                         <TextBlock Text="添加" FontSize="14"/>
@@ -98,7 +98,7 @@
                             Padding="14,7">
                         <Button.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="16"/>
+                                <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}"/>
                             </Style>
                         </Button.Resources>
                         <TextBlock Text="添加" FontSize="14"/>
@@ -117,10 +117,10 @@
                 </Button>
                 <Button x:Name="SaveBtn" Click="OnSaveClicked" Cursor="Hand" Margin="12,0,0,0"
                         Background="{DynamicResource AccentBrush}" BorderThickness="0"
-                        Foreground="White" Padding="22,10">
+                        Foreground="{DynamicResource TextOnAccentBrush}" Padding="22,10">
                     <Button.Resources>
                         <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="22"/>
+                            <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}"/>
                             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                         </Style>
                     </Button.Resources>

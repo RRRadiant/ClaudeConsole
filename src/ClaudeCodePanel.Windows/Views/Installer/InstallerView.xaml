@@ -33,7 +33,7 @@
                     <StackPanel Margin="20,18">
 
                         <!-- Status -->
-                        <Border CornerRadius="12"
+                        <Border CornerRadius="{DynamicResource RadiusSm}"
                                 Background="{DynamicResource GlassCardBgBrush}"
                                 BorderBrush="{DynamicResource BorderCardBrush}"
                                 BorderThickness="1"
@@ -135,7 +135,7 @@
                         </StackPanel>
 
                         <!-- Status message -->
-                        <Border CornerRadius="10"
+                        <Border CornerRadius="{DynamicResource RadiusXs}"
                                 Padding="14,10"
                                 Visibility="{Binding ShowStatusMessage, Converter={StaticResource BoolToVisibilityConverter}}"
                                 Margin="0,8,0,0">

@@ -1,3 +1,4 @@
+using System.IO;
 using ClaudeCodePanel.Windows.Services;
 
 namespace ClaudeCodePanel.Windows.Tests.Services;
@@ -143,5 +144,23 @@ public class SkillRepositoryServiceTests
         var (name, _) = SkillRepositoryService.ParseSkillMarkdownFrontmatter(markdown);
 
         Assert.Equal("First", name);
+    }
+
+    [Fact]
+    public void NormalizeSkillId_GitUrl_StripsGitSuffix()
+    {
+        var result = SkillRepositoryService.NormalizeSkillId("https://github.com/acme/example-skill.git");
+
+        Assert.Equal("example-skill", result);
+    }
+
+    [Fact]
+    public void GetSafeSkillDirectory_UsesNormalizedLeafNameInsideSkillsDirectory()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"skills-{Guid.NewGuid()}");
+
+        var result = SkillRepositoryService.GetSafeSkillDirectory(root, @"..\unsafe-name");
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "unsafe-name"), result);
     }
 }

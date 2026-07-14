@@ -7,7 +7,7 @@
     <Grid>
         <!-- ═══ Installed mode — compact horizontal row ═══ -->
         <Border x:Name="InstalledRoot"
-                CornerRadius="10"
+                CornerRadius="{DynamicResource RadiusXs}"
                 Background="Transparent"
                 Height="52"
                 Padding="16,0"
@@ -103,7 +103,7 @@
 
         <!-- ═══ Marketplace mode — GlassCard(Compact) ═══ -->
         <Border x:Name="MarketplaceRoot"
-                CornerRadius="24"
+                CornerRadius="{DynamicResource RadiusXl}"
                 Background="Transparent"
                 BorderBrush="{DynamicResource BorderDefaultBrush}"
                 BorderThickness="1"
@@ -159,12 +159,12 @@
                             Cursor="Hand"
                             Background="{DynamicResource AccentBrush}"
                             BorderThickness="0"
-                            Foreground="White"
+                            Foreground="{DynamicResource TextOnAccentBrush}"
                             Padding="16,7"
                             Visibility="Collapsed">
                         <Button.Resources>
                             <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="22"/>
+                                <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}"/>
                                 <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                             </Style>
                         </Button.Resources>

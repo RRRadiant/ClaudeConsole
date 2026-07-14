@@ -4,7 +4,7 @@
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared">
 
     <!-- ═══════════════════════════════════════════════════════════
-         GlassButton — Liquid Glass pill-shaped button
+         GlassButton — Liquid Glass rounded button
          Matches .glass-button from Claude-Win
 
          Variants:
@@ -19,7 +19,7 @@
          ═══════════════════════════════════════════════════════════ -->
 
     <Border x:Name="RootBorder"
-            CornerRadius="22"
+            CornerRadius="{DynamicResource RadiusPill}"
             ClipToBounds="True"
             Cursor="Hand"
             RenderTransformOrigin="0.5,0.5"
@@ -35,7 +35,7 @@
         <!-- Grid container to layer highlight + content -->
         <Grid>
             <!-- Inner highlight (top edge microstructure) -->
-            <Border CornerRadius="22" BorderThickness="0" ClipToBounds="True">
+            <Border CornerRadius="{DynamicResource RadiusPill}" BorderThickness="0" ClipToBounds="True">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Color="#0FFFFFFF" Offset="0"/>

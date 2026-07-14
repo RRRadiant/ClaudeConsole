@@ -10,7 +10,7 @@
     <AssemblyName>ClaudeConsole</AssemblyName>
     <RootNamespace>ClaudeCodePanel.Windows</RootNamespace>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <Authors>Claude Code Panel</Authors>
     <Description>Claude Code Configuration Panel for Windows</Description>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>

@@ -15,9 +15,19 @@
     <!-- Window Background Gradient — used by MainWindow BgBorder -->
     <RadialGradientBrush x:Key="WindowBgBrush" Center="0.5,0" RadiusX="0.8" RadiusY="0.6">
         <RadialGradientBrush.GradientStops>
-            <GradientStop Color="#f8f9fa" Offset="0"/>
-            <GradientStop Color="#e9ecef" Offset="1"/>
+            <GradientStop Color="#f6f8fb" Offset="0"/>
+            <GradientStop Color="#eef2f6" Offset="1"/>
         </RadialGradientBrush.GradientStops>
+    </RadialGradientBrush>
+
+    <RadialGradientBrush x:Key="WindowAmbientPrimaryBrush" Center="0.85,0.08" RadiusX="0.52" RadiusY="0.52">
+        <GradientStop Color="#12AFC7E8" Offset="0"/>
+        <GradientStop Color="#00AFC7E8" Offset="1"/>
+    </RadialGradientBrush>
+
+    <RadialGradientBrush x:Key="WindowAmbientSecondaryBrush" Center="0.12,0.92" RadiusX="0.42" RadiusY="0.42">
+        <GradientStop Color="#0CF3F6FB" Offset="0"/>
+        <GradientStop Color="#00F3F6FB" Offset="1"/>
     </RadialGradientBrush>
 
     <!-- Background Depth Layers -->
@@ -54,6 +64,7 @@
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#3b82f6"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#1adbeafe"/>
     <SolidColorBrush x:Key="AccentGlowBrush" Color="#26dbeafe"/>
+    <SolidColorBrush x:Key="TextOnAccentBrush" Color="#ffffff"/>
 
     <!-- Text Colors -->
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#111827"/>
@@ -147,13 +158,16 @@
     </Style>
 
     <!-- Design Tokens (shared with dark theme) -->
-    <CornerRadius x:Key="RadiusSm">4</CornerRadius>
-    <CornerRadius x:Key="RadiusMd">6</CornerRadius>
-    <CornerRadius x:Key="RadiusLg">8</CornerRadius>
-    <CornerRadius x:Key="RadiusXl">12</CornerRadius>
-    <CornerRadius x:Key="Radius2xl">16</CornerRadius>
-    <CornerRadius x:Key="Radius3xl">24</CornerRadius>
-    <CornerRadius x:Key="Radius4xl">32</CornerRadius>
+    <CornerRadius x:Key="RadiusMicro">2</CornerRadius>
+    <CornerRadius x:Key="RadiusXs">8</CornerRadius>
+    <CornerRadius x:Key="RadiusSm">12</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">16</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">20</CornerRadius>
+    <CornerRadius x:Key="RadiusXl">24</CornerRadius>
+    <CornerRadius x:Key="Radius2xl">28</CornerRadius>
+    <CornerRadius x:Key="Radius3xl">32</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">22</CornerRadius>
+    <CornerRadius x:Key="RadiusWindow">26</CornerRadius>
 
     <sys:Double x:Key="FontSizeXs" xmlns:sys="clr-namespace:System;assembly=mscorlib">11</sys:Double>
     <sys:Double x:Key="FontSizeSm" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>

@@ -10,7 +10,7 @@
             <Border x:Name="eventRow"
                     Padding="12,10"
                     Background="Transparent"
-                    CornerRadius="8"
+                    CornerRadius="{DynamicResource RadiusXs}"
                     RenderTransformOrigin="0.5,0.5">
                 <Border.RenderTransform>
                     <TranslateTransform X="0" Y="0"/>

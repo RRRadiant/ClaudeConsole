@@ -51,7 +51,8 @@
                 <StackPanel Margin="48,0,48,24">
 
                     <!-- Code editor -->
-                    <Border x:Name="EditorBorder" CornerRadius="16"
+                    <Border x:Name="EditorBorder"
+                            CornerRadius="{DynamicResource RadiusMd}"
                             Background="{DynamicResource EditorBackgroundBrush}" Padding="8"
                             BorderBrush="{DynamicResource BorderDefaultBrush}"
                             BorderThickness="1">
@@ -149,7 +150,7 @@
         <Border x:Name="ConflictOverlay" Grid.RowSpan="4"
                 Background="{DynamicResource DialogDimmingBrush}" Visibility="Collapsed">
             <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                    CornerRadius="16" Background="{DynamicResource OverlayBackgroundBrush}"
+                    CornerRadius="{DynamicResource RadiusMd}" Background="{DynamicResource OverlayBackgroundBrush}"
                     Padding="28" MaxWidth="800"
                     BorderBrush="{DynamicResource BorderStrongBrush}"
                     BorderThickness="1">
@@ -189,7 +190,7 @@
                                        FontSize="17" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        Margin="0,0,0,8"/>
-                            <Border Background="{DynamicResource EditorBackgroundBrush}" CornerRadius="8"
+                            <Border Background="{DynamicResource EditorBackgroundBrush}" CornerRadius="{DynamicResource RadiusXs}"
                                     Padding="8" MaxHeight="200"
                                     BorderBrush="{DynamicResource BorderDefaultBrush}"
                                     BorderThickness="1">
@@ -214,7 +215,7 @@
                                        FontSize="17" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        Margin="0,0,0,8"/>
-                            <Border Background="{DynamicResource EditorBackgroundBrush}" CornerRadius="8"
+                            <Border Background="{DynamicResource EditorBackgroundBrush}" CornerRadius="{DynamicResource RadiusXs}"
                                     Padding="8" MaxHeight="200"
                                     BorderBrush="{DynamicResource BorderDefaultBrush}"
                                     BorderThickness="1">

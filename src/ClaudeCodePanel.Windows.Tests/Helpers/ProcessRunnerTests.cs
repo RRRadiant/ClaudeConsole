@@ -183,4 +183,47 @@ public sealed class ConfigFileServiceWriteJSONTests
                 System.IO.File.Delete(tempFile + ".bak");
         }
     }
+
+    [Fact]
+    public void WriteText_OverwritingExistingFile_CreatesBackup()
+    {
+        var tempFile = System.IO.Path.GetTempFileName();
+        try
+        {
+            System.IO.File.WriteAllText(tempFile, "old text");
+            var service = ConfigFileService.Instance;
+
+            service.WriteText("new text", tempFile);
+
+            Assert.Equal("new text", System.IO.File.ReadAllText(tempFile));
+            Assert.Equal("old text", System.IO.File.ReadAllText(tempFile + ".bak"));
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+                System.IO.File.Delete(tempFile);
+            if (System.IO.File.Exists(tempFile + ".bak"))
+                System.IO.File.Delete(tempFile + ".bak");
+        }
+    }
+
+    [Fact]
+    public void WriteText_MtimeMismatch_ThrowsConflict()
+    {
+        var tempFile = System.IO.Path.GetTempFileName();
+        try
+        {
+            System.IO.File.WriteAllText(tempFile, "text");
+            var service = ConfigFileService.Instance;
+
+            var ex = Assert.Throws<ConfigFileException>(() =>
+                service.WriteText("updated", tempFile, DateTime.UtcNow.AddMinutes(1)));
+            Assert.Equal(ConfigFileError.ConflictDetected, ex.Error);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+                System.IO.File.Delete(tempFile);
+        }
+    }
 }

@@ -234,46 +234,13 @@ public sealed class ConfigFileService : IConfigFileService
         string path,
         DateTime? expectedMtime = null)
     {
-        // Mtime conflict check
-        if (expectedMtime.HasValue && File.Exists(path))
-        {
-            var currentMtime = File.GetLastWriteTimeUtc(path);
-            if (Math.Abs((currentMtime - expectedMtime.Value).TotalSeconds) > 0.1)
-            {
-                throw new ConfigFileException(
-                    ConfigFileError.ConflictDetected,
-                    $"File was modified externally: {path}");
-            }
-        }
-
-        // Atomic write: write .tmp, delete original, move .tmp
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
         var json = JsonSerializer.Serialize(dict, WriteIndentedOptions);
-        var tempPath = path + ".tmp";
-        var backupPath = path + ".bak";
+        WriteContent(json, path, expectedMtime);
+    }
 
-        try
-        {
-            File.WriteAllText(tempPath, json);
-
-            if (File.Exists(path))
-                File.Copy(path, backupPath, overwrite: true);
-
-            File.Move(tempPath, path, overwrite: true);
-        }
-        catch (Exception ex)
-        {
-            SharedHelpers.SafeLog("ConfigFileService.WriteJSON", ex, path);
-            throw;
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-        }
+    public void WriteText(string content, string path, DateTime? expectedMtime = null)
+    {
+        WriteContent(content, path, expectedMtime);
     }
 
     // ── Directory ────────────────────────────────────────
@@ -346,5 +313,51 @@ public sealed class ConfigFileService : IConfigFileService
             type: type,
             lastModified: info.LastWriteTimeUtc,
             sizeBytes: info.Exists ? info.Length : 0L);
+    }
+
+    private static void ValidateExpectedMtime(string path, DateTime? expectedMtime)
+    {
+        if (!expectedMtime.HasValue || !File.Exists(path))
+            return;
+
+        var currentMtime = File.GetLastWriteTimeUtc(path);
+        if (Math.Abs((currentMtime - expectedMtime.Value).TotalSeconds) > 0.1)
+        {
+            throw new ConfigFileException(
+                ConfigFileError.ConflictDetected,
+                $"File was modified externally: {path}");
+        }
+    }
+
+    private static void WriteContent(string content, string path, DateTime? expectedMtime)
+    {
+        ValidateExpectedMtime(path, expectedMtime);
+
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
+        var tempPath = path + ".tmp";
+        var backupPath = path + ".bak";
+
+        try
+        {
+            File.WriteAllText(tempPath, content);
+
+            if (File.Exists(path))
+                File.Copy(path, backupPath, overwrite: true);
+
+            File.Move(tempPath, path, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            SharedHelpers.SafeLog("ConfigFileService.WriteContent", ex, path);
+            throw;
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
     }
 }

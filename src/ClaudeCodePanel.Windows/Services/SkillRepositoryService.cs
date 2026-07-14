@@ -359,20 +359,21 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
     /// </summary>
     public void InstallSkill(string id, SkillSource source, string pathOrURL)
     {
-        var targetDir = Path.Combine(Config.SkillsDirectory, id);
+        var normalizedId = NormalizeSkillId(id);
+        var targetDir = GetSafeSkillDirectory(Config.SkillsDirectory, normalizedId);
 
         switch (source)
         {
             case SkillSource.LocalPath:
-                InstallFromLocalPath(id, pathOrURL, targetDir);
+                InstallFromLocalPath(normalizedId, pathOrURL, targetDir);
                 break;
 
             case SkillSource.GitURL:
-                InstallFromGitURL(id, pathOrURL, targetDir);
+                InstallFromGitURL(normalizedId, pathOrURL, targetDir);
                 break;
 
             case SkillSource.Marketplace:
-                InstallFromMarketplace(id, targetDir);
+                InstallFromMarketplace(normalizedId, targetDir);
                 break;
 
             default:
@@ -392,8 +393,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         Config.EnsureDirectoryExists(Path.GetDirectoryName(targetDir)!);
 
         // Remove existing installation if present
-        if (Directory.Exists(targetDir))
-            Directory.Delete(targetDir, recursive: true);
+        DeleteDirectoryIfExists(targetDir);
 
         CopyDirectoryRecursive(sourcePath, targetDir);
     }
@@ -403,8 +403,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         Config.EnsureDirectoryExists(Path.GetDirectoryName(targetDir)!);
 
         // Remove existing installation if present
-        if (Directory.Exists(targetDir))
-            Directory.Delete(targetDir, recursive: true);
+        DeleteDirectoryIfExists(targetDir);
 
         try
         {
@@ -560,8 +559,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
                     $"Skill '{id}' not found in the official Claude Code repository");
             }
 
-            if (Directory.Exists(targetDir))
-                Directory.Delete(targetDir, recursive: true);
+            DeleteDirectoryIfExists(targetDir);
 
             CopyDirectoryRecursive(skillSourceDir, targetDir);
         }
@@ -578,10 +576,9 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
     /// </summary>
     public void UninstallSkill(string id)
     {
-        var targetDir = Path.Combine(Config.SkillsDirectory, id);
-
-        if (Directory.Exists(targetDir))
-            Directory.Delete(targetDir, recursive: true);
+        var normalizedId = NormalizeSkillId(id);
+        var targetDir = GetSafeSkillDirectory(Config.SkillsDirectory, normalizedId);
+        DeleteDirectoryIfExists(targetDir);
     }
 
     // ── List installed ────────────────────────────────────
@@ -625,7 +622,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
     /// </summary>
     public bool IsSkillInstalled(string id)
     {
-        var path = Path.Combine(Config.SkillsDirectory, id);
+        var path = GetSafeSkillDirectory(Config.SkillsDirectory, id);
         return Directory.Exists(path);
     }
 
@@ -692,5 +689,44 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         {
             Debug.WriteLine($"[SkillRepositoryService] SaveCache failed: {ex.Message}");
         }
+    }
+
+    internal static string NormalizeSkillId(string rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+            throw new SkillRepoException("Skill id cannot be empty.");
+
+        var trimmed = rawValue.Trim().TrimEnd('/', '\\');
+        var candidate = Path.GetFileName(trimmed);
+        if (candidate.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            candidate = Path.GetFileNameWithoutExtension(candidate);
+
+        if (string.IsNullOrWhiteSpace(candidate) || candidate is "." or "..")
+            throw new SkillRepoException($"Invalid skill id: {rawValue}");
+
+        if (candidate.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new SkillRepoException($"Invalid skill id: {rawValue}");
+
+        return candidate;
+    }
+
+    internal static string GetSafeSkillDirectory(string skillsDirectory, string rawSkillId)
+    {
+        var root = Path.GetFullPath(skillsDirectory);
+        var skillId = NormalizeSkillId(rawSkillId);
+        var fullPath = Path.GetFullPath(Path.Combine(root, skillId));
+        var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                         + Path.DirectorySeparatorChar;
+
+        if (!fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new SkillRepoException($"Resolved skill path escaped the skills directory: {rawSkillId}");
+
+        return fullPath;
+    }
+
+    private static void DeleteDirectoryIfExists(string path)
+    {
+        if (Directory.Exists(path))
+            Directory.Delete(path, recursive: true);
     }
 }

@@ -286,8 +286,8 @@ public partial class APIConfigViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Persist the current configuration to Windows Credential Manager
-    /// and settings.json.
+    /// Persist the current configuration to Windows Credential Manager,
+    /// non-secret settings.json values, and secret-only settings.local.json values.
     /// </summary>
     [RelayCommand]
     public Task SaveConfigAsync()
@@ -314,50 +314,37 @@ public partial class APIConfigViewModel : ObservableObject
             // ── 2. Save key to Credential Manager ──
             IsKeySaved = !string.IsNullOrEmpty(ApiKey);
 
-            // ── 3. Write env vars to settings.json (preserve existing keys) ──
+            // ── 3. Write non-secret env vars to settings.json and secrets to settings.local.json ──
             var settingsPath = _configFileService.SettingsPath;
             var dir = Path.GetDirectoryName(settingsPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
-            // Read existing file first to preserve all other keys
             var rootDict = _configFileService.ReadJSONOrEmpty(settingsPath);
+            var localRootDict = _configFileService.ReadJSONOrEmpty(_configFileService.SettingsLocalPath);
 
-            // Merge/update the "env" object
-            Dictionary<string, JsonElement> envDict = new();
-            if (rootDict.TryGetValue("env", out var existingEnv) &&
-                existingEnv.ValueKind == JsonValueKind.Object)
-            {
-                foreach (var kvp in existingEnv.EnumerateObject())
-                    envDict[kvp.Name] = kvp.Value.Clone();
-            }
+            var envDict = ReadEnvObject(rootDict);
+            var localEnvDict = ReadEnvObject(localRootDict);
 
-            // Update env vars from current config
-            void SetEnv(string key, string value)
-            {
-                if (!string.IsNullOrEmpty(value))
-                    envDict[key] = JsonSerializer.SerializeToElement(value);
-                else
-                    envDict.Remove(key);
-            }
-
-            SetEnv("ANTHROPIC_BASE_URL", BaseURL);
-            SetEnv("ANTHROPIC_AUTH_TOKEN", ApiKey);
-            SetEnv("ANTHROPIC_MODEL", EnabledModels.FirstOrDefault() ?? "");
-            SetEnv("ANTHROPIC_DEFAULT_OPUS_MODEL", "");
-            SetEnv("ANTHROPIC_DEFAULT_SONNET_MODEL", "");
-            SetEnv("ANTHROPIC_DEFAULT_HAIKU_MODEL", "");
+            SetEnvValue(envDict, "ANTHROPIC_BASE_URL", BaseURL);
+            SetEnvValue(envDict, "ANTHROPIC_MODEL", EnabledModels.FirstOrDefault() ?? "");
+            SetEnvValue(envDict, "ANTHROPIC_DEFAULT_OPUS_MODEL", "");
+            SetEnvValue(envDict, "ANTHROPIC_DEFAULT_SONNET_MODEL", "");
+            SetEnvValue(envDict, "ANTHROPIC_DEFAULT_HAIKU_MODEL", "");
             if (EnabledModels.Count > 1)
             {
                 var ops = EnabledModels.FirstOrDefault(m => m.Contains("opus", StringComparison.OrdinalIgnoreCase));
                 var son = EnabledModels.FirstOrDefault(m => m.Contains("sonnet", StringComparison.OrdinalIgnoreCase));
                 var hai = EnabledModels.FirstOrDefault(m => m.Contains("haiku", StringComparison.OrdinalIgnoreCase));
-                if (!string.IsNullOrEmpty(ops)) SetEnv("ANTHROPIC_DEFAULT_OPUS_MODEL", ops);
-                if (!string.IsNullOrEmpty(son)) SetEnv("ANTHROPIC_DEFAULT_SONNET_MODEL", son);
-                if (!string.IsNullOrEmpty(hai)) SetEnv("ANTHROPIC_DEFAULT_HAIKU_MODEL", hai);
+                if (!string.IsNullOrEmpty(ops)) SetEnvValue(envDict, "ANTHROPIC_DEFAULT_OPUS_MODEL", ops);
+                if (!string.IsNullOrEmpty(son)) SetEnvValue(envDict, "ANTHROPIC_DEFAULT_SONNET_MODEL", son);
+                if (!string.IsNullOrEmpty(hai)) SetEnvValue(envDict, "ANTHROPIC_DEFAULT_HAIKU_MODEL", hai);
             }
+            SetEnvValue(envDict, "ANTHROPIC_AUTH_TOKEN", "");
+            SetEnvValue(localEnvDict, "ANTHROPIC_AUTH_TOKEN", ApiKey);
 
             rootDict["env"] = JsonSerializer.SerializeToElement(envDict);
+            localRootDict["env"] = JsonSerializer.SerializeToElement(localEnvDict);
 
             // Also save flat keys for panel's own reading
             if (!string.IsNullOrEmpty(BaseURL))
@@ -371,6 +358,7 @@ public partial class APIConfigViewModel : ObservableObject
 
             // Write preserving existing keys
             _configFileService.WriteJSON(rootDict, settingsPath);
+            _configFileService.WriteJSON(localRootDict, _configFileService.SettingsLocalPath);
 
             ErrorMessage = null;
         }
@@ -775,5 +763,26 @@ public partial class APIConfigViewModel : ObservableObject
     public void ClearEnabledModels()
     {
         EnabledModels = new HashSet<string>();
+    }
+
+    private static Dictionary<string, JsonElement> ReadEnvObject(Dictionary<string, JsonElement> rootDict)
+    {
+        var envDict = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        if (rootDict.TryGetValue("env", out var existingEnv) &&
+            existingEnv.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var kvp in existingEnv.EnumerateObject())
+                envDict[kvp.Name] = kvp.Value.Clone();
+        }
+
+        return envDict;
+    }
+
+    private static void SetEnvValue(Dictionary<string, JsonElement> envDict, string key, string value)
+    {
+        if (!string.IsNullOrEmpty(value))
+            envDict[key] = JsonSerializer.SerializeToElement(value);
+        else
+            envDict.Remove(key);
     }
 }

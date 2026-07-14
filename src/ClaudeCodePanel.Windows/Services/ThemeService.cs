@@ -195,13 +195,14 @@ public sealed class ThemeService : INotifyPropertyChanged
         {
             var overlay = new Border
             {
-                Background = new SolidColorBrush(IsDarkTheme
-                    ? Color.FromRgb(0x08, 0x0D, 0x1F)
-                    : Color.FromRgb(0xF8, 0xF9, 0xFA)),
+                Background = new SolidColorBrush(GetThemeTransitionColor()),
                 Opacity = 1.0,
                 IsHitTestVisible = false
             };
 
+            Grid.SetRowSpan(overlay, Math.Max(1, rootGrid.RowDefinitions.Count));
+            Grid.SetColumnSpan(overlay, Math.Max(1, rootGrid.ColumnDefinitions.Count));
+            Panel.SetZIndex(overlay, int.MaxValue);
             rootGrid.Children.Add(overlay);
             ApplyThemeResources();
 
@@ -326,6 +327,11 @@ public sealed class ThemeService : INotifyPropertyChanged
         darkTheme
             ? Color.FromRgb(0x6F, 0xAA, 0xDD)
             : Color.FromRgb(0x25, 0x63, 0xEB);
+
+    private Color GetThemeTransitionColor() =>
+        IsDarkTheme
+            ? Color.FromRgb(0x07, 0x0C, 0x1B)
+            : Color.FromRgb(0xF6, 0xF8, 0xFB);
 
     private static Color WithAlpha(Color color, byte alpha) =>
         Color.FromArgb(alpha, color.R, color.G, color.B);

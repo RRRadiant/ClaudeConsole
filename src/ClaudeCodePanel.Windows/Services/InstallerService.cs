@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -99,9 +98,9 @@ public sealed class InstallerService : IInstallerService
 
     // ── Process runner ─────────────────────────────────────
 
-    private static async Task<InstallResult> RunCommandAsync(string command, int timeoutMs = 180_000)
+    private static async Task<InstallResult> RunCommandAsync(string fileName, string arguments, int timeoutMs = 180_000)
     {
-        var result = await ProcessRunner.RunAsync("cmd.exe", $"/c {command}", timeoutMs).ConfigureAwait(false);
+        var result = await ProcessRunner.RunAsync(fileName, arguments, timeoutMs).ConfigureAwait(false);
 
         if (result.TimedOut)
             return new InstallResult { Success = false, Error = "超时" };
@@ -127,10 +126,17 @@ public sealed class InstallerService : IInstallerService
         if (method == InstallMethod.Npm)
         {
             var npm = await FindNpmAsync();
-            return await RunCommandAsync($"\"{npm}\" install -g {ClaudePkg} --registry=https://registry.npmmirror.com");
+            var officialResult = await RunCommandAsync(npm, $"install -g {ClaudePkg}", AppConstants.TimeoutInstall);
+            if (officialResult.Success)
+                return officialResult;
+
+            return await RunCommandAsync(
+                npm,
+                $"install -g {ClaudePkg} {AppConstants.NpmMirror}",
+                AppConstants.TimeoutInstall);
         }
         if (method == InstallMethod.Winget)
-            return await RunCommandAsync("winget install Anthropic.ClaudeCode");
+            return await RunCommandAsync("winget", "install Anthropic.ClaudeCode", AppConstants.TimeoutInstall);
 
         return new InstallResult { Success = false, Error = "未知安装方式" };
     }
@@ -140,7 +146,7 @@ public sealed class InstallerService : IInstallerService
     public async Task<InstallResult> UninstallCliAsync()
     {
         var npm = await FindNpmAsync();
-        return await RunCommandAsync($"\"{npm}\" uninstall -g {ClaudePkg}", 60_000);
+        return await RunCommandAsync(npm, $"uninstall -g {ClaudePkg}", AppConstants.TimeoutUninstall);
     }
 
     // ── Claude Code CLI Status ─────────────────────────────

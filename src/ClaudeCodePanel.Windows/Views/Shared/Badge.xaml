@@ -16,7 +16,7 @@
          ═══════════════════════════════════════════════════════════ -->
 
     <Border x:Name="BadgeBorder"
-            CornerRadius="14"
+            CornerRadius="{DynamicResource RadiusSm}"
             ClipToBounds="True"
             Padding="12,6"
             BorderThickness="1">

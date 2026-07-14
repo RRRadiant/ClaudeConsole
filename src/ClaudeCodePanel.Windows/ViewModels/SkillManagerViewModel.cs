@@ -428,7 +428,7 @@ public partial class SkillManagerViewModel : ObservableObject
             // Derive the skill id from the last path component of the
             // local path or Git URL (matches Swift URL.lastPathComponent
             // behaviour).
-            var id = Path.GetFileName(InstallPathOrURL.TrimEnd('/', '\\'));
+            var id = SkillRepositoryService.NormalizeSkillId(InstallPathOrURL);
 
             await Task.Run(() =>
             {

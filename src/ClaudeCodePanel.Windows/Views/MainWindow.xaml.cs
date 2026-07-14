@@ -5,8 +5,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using ClaudeCodePanel.Windows.Helpers;
 using ClaudeCodePanel.Windows.Services;
@@ -78,7 +76,6 @@ namespace ClaudeCodePanel.Windows.Views
 
         private readonly MainViewModel _mainViewModel;
         private PropertyChangedEventHandler? _themeServicePropertyChangedHandler;
-        private SizeChangedEventHandler? _sizeChangedHandler;
 
         // ── Constructor ──────────────────────────────────────────────────────
 
@@ -121,22 +118,12 @@ namespace ClaudeCodePanel.Windows.Views
                 source.AddHook(WndProc);
             }
 
-            // Capture blurred title bar background after window is rendered
             Loaded += OnMainWindowLoaded;
         }
 
-        /// <summary>
-        /// After the window is fully loaded, capture a blurred snapshot of the
-        /// top area to use as the title bar's frosted-glass background.
-        /// </summary>
         private void OnMainWindowLoaded(object sender, RoutedEventArgs e)
         {
             Loaded -= OnMainWindowLoaded;
-            UpdateTitleBarBlur();
-            _sizeChangedHandler ??= (_, _) => UpdateTitleBarBlur();
-            SizeChanged -= _sizeChangedHandler;
-            SizeChanged += _sizeChangedHandler;
-
             _themeServicePropertyChangedHandler ??= OnThemeServicePropertyChanged;
             ThemeService.Instance.PropertyChanged -= _themeServicePropertyChangedHandler;
             ThemeService.Instance.PropertyChanged += _themeServicePropertyChangedHandler;
@@ -146,9 +133,6 @@ namespace ClaudeCodePanel.Windows.Views
         {
             _mainViewModel.PropertyChanged -= OnSelectedPanelViewModelChanged;
             StateChanged -= OnWindowStateChanged;
-
-            if (_sizeChangedHandler != null)
-                SizeChanged -= _sizeChangedHandler;
 
             if (_themeServicePropertyChangedHandler != null)
                 ThemeService.Instance.PropertyChanged -= _themeServicePropertyChangedHandler;
@@ -164,7 +148,6 @@ namespace ClaudeCodePanel.Windows.Views
             Dispatcher.Invoke(() =>
             {
                 Windows11Interop.ApplyTitleBarTheme(this, ThemeService.Instance.IsDarkTheme);
-                UpdateTitleBarBlur();
             });
 
             // Force WPF to destroy and recreate the current View so all
@@ -173,74 +156,6 @@ namespace ClaudeCodePanel.Windows.Views
             var current = _mainViewModel.SelectedPanelViewModel;
             ContentArea.Content = null;
             ContentArea.Content = current;
-        }
-
-        /// <summary>
-        /// Captures the top 36 px of the root grid as a RenderTargetBitmap,
-        /// applies BlurEffect via the Image control, and caches the result.
-        /// In light mode the blur is hidden (falls back to solid color).
-        /// </summary>
-        private void UpdateTitleBarBlur()
-        {
-            if (TitleBarBlurImage == null || RootGrid == null) return;
-
-            bool isDark = ThemeService.Instance.IsDarkTheme;
-
-            if (!isDark)
-            {
-                TitleBarBlurImage.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            TitleBarBlurImage.Visibility = Visibility.Visible;
-
-            try
-            {
-                double titleBarHeight = TitleBarCaptureHeight;
-                double dpiScale = VisualTreeHelper.GetDpi(this).DpiScaleX;
-
-                int width = (int)(ActualWidth * dpiScale);
-                int height = (int)(titleBarHeight * dpiScale);
-
-                if (width <= 0 || height <= 0) return;
-
-                var renderTarget = new RenderTargetBitmap(width, height, 96, 96,
-                    System.Windows.Media.PixelFormats.Pbgra32);
-
-                // Temporarily arrange RootGrid for the capture
-                var originalClip = RootGrid.Clip;
-                RootGrid.Clip = null;
-
-                // Render the top portion of RootGrid
-                var visualBrush = new System.Windows.Media.VisualBrush(RootGrid)
-                {
-                    Viewbox = new Rect(0, 0, ActualWidth, titleBarHeight),
-                    ViewboxUnits = BrushMappingMode.Absolute,
-                    Viewport = new Rect(0, 0, 1, 1),
-                    ViewportUnits = BrushMappingMode.RelativeToBoundingBox,
-                    Stretch = Stretch.Fill
-                };
-
-                var drawingVisual = new System.Windows.Media.DrawingVisual();
-                using (var ctx = drawingVisual.RenderOpen())
-                {
-                    ctx.DrawRectangle(visualBrush, null,
-                        new Rect(0, 0, ActualWidth, titleBarHeight));
-                }
-
-                renderTarget.Render(drawingVisual);
-                RootGrid.Clip = originalClip;
-
-                TitleBarBlurImage.Source = renderTarget;
-
-                // Apply bitmap cache for performance
-                TitleBarBlurImage.CacheMode = new System.Windows.Media.BitmapCache(1.0);
-            }
-            catch (Exception ex)
-            {
-                SharedHelpers.SafeLog("MainWindow.UpdateTitleBarBlur", ex);
-                TitleBarBlurImage.Visibility = Visibility.Collapsed;
-            }
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -447,7 +362,9 @@ namespace ClaudeCodePanel.Windows.Views
                 MaximizeRestoreButton.ToolTip = "Maximize";
 
                 // Restore rounded corners and shadow
-                WindowChromeBorder.CornerRadius = new CornerRadius(26);
+                WindowChromeBorder.CornerRadius = TryFindResource("RadiusWindow") is CornerRadius radius
+                    ? radius
+                    : new CornerRadius(26);
                 WindowShadow.Visibility = Visibility.Visible;
             }
         }

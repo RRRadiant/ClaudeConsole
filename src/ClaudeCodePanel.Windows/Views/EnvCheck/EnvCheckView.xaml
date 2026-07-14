@@ -8,7 +8,7 @@
     <UserControl.Resources>
         <!-- ── Dep item template ── -->
         <DataTemplate x:Key="DepItemTemplate" DataType="{x:Type vm:EnvCheckViewModel+DepItem}">
-            <Border CornerRadius="12"
+            <Border CornerRadius="{DynamicResource RadiusSm}"
                     Background="{DynamicResource GlassCardBgBrush}"
                     BorderBrush="{DynamicResource BorderCardBrush}"
                     BorderThickness="1"
@@ -59,7 +59,7 @@
 
                     <!-- Status pill -->
                     <Border Grid.Column="2"
-                            CornerRadius="10"
+                            CornerRadius="{DynamicResource RadiusXs}"
                             Padding="10,4"
                             Margin="0,0,10,0"
                             VerticalAlignment="Center">
@@ -135,7 +135,7 @@
 
                     <!-- Summary pills -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,4,0,0">
-                        <Border CornerRadius="10"
+                        <Border CornerRadius="{DynamicResource RadiusXs}"
                                 Padding="10,4"
                                 Background="{DynamicResource StatusRunningBgBrush}"
                                 Margin="0,0,6,0">
@@ -145,7 +145,7 @@
                                 <Run Text="{Binding ReadyCount}"/>
                             </TextBlock>
                         </Border>
-                        <Border CornerRadius="10"
+                        <Border CornerRadius="{DynamicResource RadiusXs}"
                                 Padding="10,4"
                                 Background="{DynamicResource StatusErrorBgBrush}">
                             <Border.Style>
@@ -180,7 +180,7 @@
                 </StackPanel>
 
                 <!-- ── All OK Banner ── -->
-                <Border CornerRadius="12"
+                <Border CornerRadius="{DynamicResource RadiusSm}"
                         Padding="16,12"
                         Background="{DynamicResource StatusRunningBgBrush}"
                         Margin="0,0,0,20"
@@ -193,7 +193,7 @@
                 </Border>
 
                 <!-- ── Status Message ── -->
-                <Border CornerRadius="10"
+                <Border CornerRadius="{DynamicResource RadiusXs}"
                         Padding="14,10"
                         Background="{DynamicResource StatusErrorBgBrush}"
                         Visibility="{Binding ShowStatusMessage, Converter={StaticResource BoolToVisibilityConverter}}"

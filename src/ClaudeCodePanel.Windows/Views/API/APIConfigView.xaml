@@ -11,7 +11,7 @@
         </LinearGradientBrush>
 
         <Style x:Key="PagePanelStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="24"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusXl}"/>
             <Setter Property="Background" Value="{DynamicResource OverlayBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -44,7 +44,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="14"
+                                CornerRadius="{DynamicResource RadiusSm}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
@@ -64,7 +64,7 @@
                BasedOn="{StaticResource SecondaryActionButtonStyle}">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}"/>
         </Style>
 
         <Style x:Key="InlineTextButtonStyle" TargetType="Button">
@@ -85,7 +85,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="18"
+                                CornerRadius="{DynamicResource RadiusLg}"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter/>
                         </Border>
@@ -174,7 +174,7 @@
 
                         <Border Grid.Column="1"
                                 Padding="10,6"
-                                CornerRadius="12"
+                                CornerRadius="{DynamicResource RadiusSm}"
                                 Background="{DynamicResource GlassCardBgBrush}"
                                 BorderBrush="{DynamicResource BorderDefaultBrush}"
                                 BorderThickness="1">

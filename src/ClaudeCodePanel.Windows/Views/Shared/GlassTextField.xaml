@@ -12,7 +12,7 @@
         <!-- Row 0 — Input area -->
         <Border x:Name="RootBorder"
                 Grid.Row="0"
-                CornerRadius="16"
+                CornerRadius="{DynamicResource RadiusMd}"
                 ClipToBounds="False">
 
             <Border.Effect>
@@ -24,7 +24,7 @@
             </Border.Effect>
 
             <Border x:Name="StrokeBorder"
-                    CornerRadius="16"
+                    CornerRadius="{DynamicResource RadiusMd}"
                     BorderThickness="1"
                     Background="{DynamicResource InputBackgroundBrush}"
                     ClipToBounds="True">
