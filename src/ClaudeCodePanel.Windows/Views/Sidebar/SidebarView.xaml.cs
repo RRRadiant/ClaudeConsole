@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
+using ThemeMode = ClaudeCodePanel.Windows.Services.ThemeMode;
 using Forms = System.Windows.Forms;
 
 namespace ClaudeCodePanel.Windows.Views.Sidebar;
