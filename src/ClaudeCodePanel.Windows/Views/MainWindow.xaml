@@ -51,28 +51,28 @@
                BasedOn="{StaticResource TitleBarButtonStyle}">
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border"
-                                CornerRadius="12"
-                                Background="{TemplateBinding Background}">
-                            <Border.Effect>
-                                <DropShadowEffect x:Name="closeGlow"
-                                                  ShadowDepth="0"
-                                                  BlurRadius="10"
-                                                  Opacity="0"
-                                                  Color="#cf6b6b"/>
-                            </Border.Effect>
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#cf6b6b"/>
-                                <Setter TargetName="closeGlow" Property="Opacity" Value="0.35"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
+	                    <ControlTemplate TargetType="Button">
+	                        <Border x:Name="border"
+	                                CornerRadius="12"
+	                                Background="{TemplateBinding Background}">
+	                            <ContentPresenter HorizontalAlignment="Center"
+	                                              VerticalAlignment="Center"/>
+	                        </Border>
+	                        <ControlTemplate.Triggers>
+	                            <Trigger Property="IsMouseOver" Value="True">
+	                                <Setter TargetName="border" Property="Background" Value="#cf6b6b"/>
+	                                <Setter TargetName="border" Property="Effect">
+	                                    <Setter.Value>
+	                                        <DropShadowEffect ShadowDepth="0"
+	                                                          BlurRadius="10"
+	                                                          Opacity="0.35"
+	                                                          Color="#cf6b6b"/>
+	                                    </Setter.Value>
+	                                </Setter>
+	                                <Setter Property="Foreground" Value="White"/>
+	                            </Trigger>
+	                        </ControlTemplate.Triggers>
+	                    </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
