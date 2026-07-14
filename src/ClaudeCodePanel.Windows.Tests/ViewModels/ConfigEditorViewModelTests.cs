@@ -1,3 +1,4 @@
+using System.IO;
 using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 
