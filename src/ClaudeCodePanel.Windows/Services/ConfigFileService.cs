@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using ClaudeCodePanel.Windows.Helpers;
 
 namespace ClaudeCodePanel.Windows.Services;
 
@@ -129,15 +130,19 @@ public sealed class ConfigFileInfo
 public sealed class ConfigFileService : IConfigFileService
 {
     public static ConfigFileService Instance { get; } = new();
+    private static readonly JsonSerializerOptions WriteIndentedOptions = new()
+    {
+        WriteIndented = true
+    };
 
     private ConfigFileService() { }
 
     // ── Paths ────────────────────────────────────────────
 
-    private string UserProfileDirectory =>
+    private static string UserProfileDirectory =>
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-    private string ClaudeDirectory =>
+    private static string ClaudeDirectory =>
         System.IO.Path.Combine(UserProfileDirectory, ".claude");
 
     public string SettingsPath =>
@@ -155,15 +160,15 @@ public sealed class ConfigFileService : IConfigFileService
     public string SkillsDirectory =>
         System.IO.Path.Combine(ClaudeDirectory, "skills");
 
-    public string AgentsDirectory =>
+    public static string AgentsDirectory =>
         System.IO.Path.Combine(ClaudeDirectory, "agents");
 
-    public string CommandsDirectory =>
+    public static string CommandsDirectory =>
         System.IO.Path.Combine(ClaudeDirectory, "commands");
 
     // ── Read / Write ─────────────────────────────────────
 
-    public string ReadFile(string path)
+    public static string ReadFile(string path)
     {
         return File.ReadAllText(path);
     }
@@ -193,7 +198,18 @@ public sealed class ConfigFileService : IConfigFileService
     public Dictionary<string, JsonElement>? ReadJSON(string path)
     {
         var json = File.ReadAllText(path);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        Dictionary<string, JsonElement>? dict;
+        try
+        {
+            dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        }
+        catch (JsonException ex)
+        {
+            throw new ConfigFileException(
+                ConfigFileError.InvalidJSON,
+                $"Invalid JSON at {path}: {ex.Message}");
+        }
+
         if (dict is null)
         {
             throw new ConfigFileException(
@@ -201,6 +217,16 @@ public sealed class ConfigFileService : IConfigFileService
                 $"Expected JSON object at {path}");
         }
         return dict;
+    }
+
+    public Dictionary<string, JsonElement> ReadJSONOrEmpty(string path)
+    {
+        if (!File.Exists(path))
+            return new Dictionary<string, JsonElement>();
+
+        return ReadJSON(path) ?? throw new ConfigFileException(
+            ConfigFileError.InvalidJSON,
+            $"Expected JSON object at {path}");
     }
 
     public void WriteJSON(
@@ -221,17 +247,33 @@ public sealed class ConfigFileService : IConfigFileService
         }
 
         // Atomic write: write .tmp, delete original, move .tmp
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
 
-        var json = JsonSerializer.Serialize(dict, options);
+        var json = JsonSerializer.Serialize(dict, WriteIndentedOptions);
         var tempPath = path + ".tmp";
+        var backupPath = path + ".bak";
 
-        File.WriteAllText(tempPath, json);
+        try
+        {
+            File.WriteAllText(tempPath, json);
 
-        File.Move(tempPath, path, overwrite: true);
+            if (File.Exists(path))
+                File.Copy(path, backupPath, overwrite: true);
+
+            File.Move(tempPath, path, overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            SharedHelpers.SafeLog("ConfigFileService.WriteJSON", ex, path);
+            throw;
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
     }
 
     // ── Directory ────────────────────────────────────────

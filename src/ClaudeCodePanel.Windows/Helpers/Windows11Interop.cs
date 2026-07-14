@@ -76,8 +76,7 @@ namespace ClaudeCodePanel.Windows.Helpers
         /// </remarks>
         public static void EnableMica(Window window)
         {
-            if (window is null)
-                throw new ArgumentNullException(nameof(window));
+            ArgumentNullException.ThrowIfNull(window);
 
             // Resolve the HWND once the window is loaded (SourceInitialized
             // is the earliest safe point for WPF interop handles).
@@ -109,8 +108,7 @@ namespace ClaudeCodePanel.Windows.Helpers
         /// </summary>
         public static void ApplyTitleBarTheme(Window window, bool dark)
         {
-            if (window is null)
-                throw new ArgumentNullException(nameof(window));
+            ArgumentNullException.ThrowIfNull(window);
 
             void OnSourceInitialized(object? sender, EventArgs e)
             {
@@ -153,7 +151,9 @@ namespace ClaudeCodePanel.Windows.Helpers
 
             // Enable the Mica backdrop.
             int useMica = 1; // BOOL TRUE
-            DwmSetWindowAttribute(hwnd, DWMWA_MICA, ref useMica, sizeof(int));
+            var micaResult = DwmSetWindowAttribute(hwnd, DWMWA_MICA, ref useMica, sizeof(int));
+            if (micaResult != 0)
+                SharedHelpers.SafeLog("Windows11Interop.EnableMicaInternal", message: $"DwmSetWindowAttribute failed: {micaResult}");
         }
 
         private static void ApplyFallbackBackground(Window window)
@@ -174,7 +174,9 @@ namespace ClaudeCodePanel.Windows.Helpers
         private static void SetTitleBarThemeInternal(IntPtr hwnd, bool dark)
         {
             int useDarkMode = dark ? 1 : 0;
-            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
+            var themeResult = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
+            if (themeResult != 0)
+                SharedHelpers.SafeLog("Windows11Interop.SetTitleBarThemeInternal", message: $"DwmSetWindowAttribute failed: {themeResult}");
         }
     }
 }

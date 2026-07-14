@@ -99,20 +99,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
 
         // ── Color Constants ───────────────────────────────────────────────
 
-        private static readonly Color AccentColor = Color.FromRgb(0x6f, 0xaa, 0xdd);  // #6faadd
         private static readonly Color ErrorColor = Color.FromRgb(0xcf, 0x6b, 0x6b);   // #cf6b6b
-
-        // Resting border: white at 6% opacity
-        private static readonly Color RestingBorderColor = Color.FromArgb(0x0F, 0xFF, 0xFF, 0xFF);
-
-        // Focused border: accent at 60% opacity
-        private static readonly Color FocusedBorderColor = Color.FromArgb(0x99, AccentColor.R, AccentColor.G, AccentColor.B);
-
-        // Focused glow: accent at 20% opacity
-        private static readonly Color FocusedGlowColor = Color.FromArgb(0x33, AccentColor.R, AccentColor.G, AccentColor.B);
-
-        // Error glow: red at 30% opacity
-        private static readonly Color ErrorGlowColor = Color.FromArgb(0x4D, ErrorColor.R, ErrorColor.G, ErrorColor.B);
 
         // ── Internal State ────────────────────────────────────────────────
 
@@ -129,7 +116,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         {
             InitializeComponent();
 
-            _borderBrush = new SolidColorBrush(RestingBorderColor);
+            _borderBrush = new SolidColorBrush(RestBorderColor());
             StrokeBorder.BorderBrush = _borderBrush;
 
             ApplyVariant();
@@ -308,10 +295,10 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                 // Focus glow: 6 px blur, blue tint at 20% opacity
                 GlowShadow.BlurRadius = 6;
                 GlowShadow.ShadowDepth = 0;
-                GlowShadow.Color = FocusedGlowColor;
+                GlowShadow.Color = FocusGlowColor();
                 GlowShadow.Opacity = 1.0;
 
-                AnimateBorderTo(FocusedBorderColor, animate);
+                AnimateBorderTo(FocusBorderColor(), animate);
             }
             else
             {
@@ -323,7 +310,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                 // If error is active, keep the error border; otherwise restore resting border
                 if (!IsError)
                 {
-                    AnimateBorderTo(RestingBorderColor, animate);
+                    AnimateBorderTo(RestBorderColor(), animate);
                 }
             }
         }
@@ -345,7 +332,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                 // Error glow: 6 px blur, red tint at 30% opacity
                 GlowShadow.BlurRadius = 6;
                 GlowShadow.ShadowDepth = 0;
-                GlowShadow.Color = ErrorGlowColor;
+                GlowShadow.Color = Color.FromArgb(0x4D, ErrorColor.R, ErrorColor.G, ErrorColor.B);
                 GlowShadow.Opacity = 1.0;
 
                 AnimateBorderTo(ErrorColor, animate);
@@ -364,14 +351,44 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                     // Still focused, restore focus glow
                     GlowShadow.BlurRadius = 6;
                     GlowShadow.ShadowDepth = 0;
-                    GlowShadow.Color = FocusedGlowColor;
+                    GlowShadow.Color = FocusGlowColor();
                     GlowShadow.Opacity = 1.0;
                 }
 
-                AnimateBorderTo(_isFocused ? FocusedBorderColor : RestingBorderColor, animate);
+                AnimateBorderTo(_isFocused ? FocusBorderColor() : RestBorderColor(), animate);
             }
 
             UpdateErrorMessage();
+        }
+
+        private static Color ThemeColor(string key, Color fallback)
+        {
+            return (Application.Current?.TryFindResource(key) as SolidColorBrush)?.Color ?? fallback;
+        }
+
+        private static Color WithAlpha(Color color, byte alpha)
+        {
+            return Color.FromArgb(alpha, color.R, color.G, color.B);
+        }
+
+        private static Color AccentThemeColor()
+        {
+            return ThemeColor("AccentBrush", Color.FromRgb(0x6F, 0xAA, 0xDD));
+        }
+
+        private static Color RestBorderColor()
+        {
+            return ThemeColor("BorderDefaultBrush", Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF));
+        }
+
+        private static Color FocusBorderColor()
+        {
+            return ThemeColor("BorderAccentBrush", WithAlpha(AccentThemeColor(), 0x99));
+        }
+
+        private static Color FocusGlowColor()
+        {
+            return WithAlpha(AccentThemeColor(), 0x33);
         }
 
         /// <summary>

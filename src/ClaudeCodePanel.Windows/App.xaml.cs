@@ -90,9 +90,9 @@ public partial class App : Application
             var configService = Services.GetRequiredService<ConfigFileService>();
             try { configService.EnsureDirectoryExists(configService.SkillsDirectory); }
             catch (Exception ex) { Debug.WriteLine($"[App] Failed to create skills dir: {ex.Message}"); }
-            try { configService.EnsureDirectoryExists(configService.AgentsDirectory); }
+            try { configService.EnsureDirectoryExists(ConfigFileService.AgentsDirectory); }
             catch (Exception ex) { Debug.WriteLine($"[App] Failed to create agents dir: {ex.Message}"); }
-            try { configService.EnsureDirectoryExists(configService.CommandsDirectory); }
+            try { configService.EnsureDirectoryExists(ConfigFileService.CommandsDirectory); }
             catch (Exception ex) { Debug.WriteLine($"[App] Failed to create commands dir: {ex.Message}"); }
 
             // Create and show the main window via DI

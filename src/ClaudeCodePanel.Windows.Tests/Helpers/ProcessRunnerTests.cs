@@ -123,4 +123,64 @@ public sealed class ConfigFileServiceWriteJSONTests
                 System.IO.File.Delete(tempFile);
         }
     }
+
+    [Fact]
+    public void ReadJSONOrEmpty_MissingFile_ReturnsEmptyObject()
+    {
+        var tempPath = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(),
+            $"missing-{Guid.NewGuid()}.json");
+
+        var service = ConfigFileService.Instance;
+        var dict = service.ReadJSONOrEmpty(tempPath);
+
+        Assert.Empty(dict);
+    }
+
+    [Fact]
+    public void ReadJSONOrEmpty_InvalidJson_ThrowsInvalidJson()
+    {
+        var tempFile = System.IO.Path.GetTempFileName();
+        try
+        {
+            System.IO.File.WriteAllText(tempFile, "{ invalid json");
+            var service = ConfigFileService.Instance;
+
+            var ex = Assert.Throws<ConfigFileException>(() => service.ReadJSONOrEmpty(tempFile));
+            Assert.Equal(ConfigFileError.InvalidJSON, ex.Error);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+                System.IO.File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public void WriteJSON_OverwritingExistingFile_CreatesBackup()
+    {
+        var tempFile = System.IO.Path.GetTempFileName();
+        try
+        {
+            System.IO.File.WriteAllText(tempFile, "{\n  \"old\": true\n}");
+            var service = ConfigFileService.Instance;
+            var dict = new System.Collections.Generic.Dictionary<string, System.Text.Json.JsonElement>
+            {
+                ["new"] = System.Text.Json.JsonSerializer.SerializeToElement("value")
+            };
+
+            service.WriteJSON(dict, tempFile);
+
+            var backupPath = tempFile + ".bak";
+            Assert.True(System.IO.File.Exists(backupPath));
+            Assert.Contains("\"old\": true", System.IO.File.ReadAllText(backupPath));
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+                System.IO.File.Delete(tempFile);
+            if (System.IO.File.Exists(tempFile + ".bak"))
+                System.IO.File.Delete(tempFile + ".bak");
+        }
+    }
 }

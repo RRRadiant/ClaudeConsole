@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Console Redesign Review</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">Claude Console / Browser Review</span>
+          <h1>三套彻底重做的桌面软件方向</h1>
+          <p>
+            目标不是把上一版修顺，而是直接换视觉体系。三套方案都保留左侧导航和右侧主工作区，
+            但重新定义层级、密度、玻璃感和主题入口。
+          </p>
+        </div>
+        <nav class="hero-nav">
+          <a href="#option-1">方案 1</a>
+          <a href="#option-2">方案 2</a>
+          <a href="#option-3">方案 3</a>
+        </nav>
+      </header>
+
+      <main class="option-list">
+        <section class="option-card precision" id="option-1">
+          <div class="option-meta">
+            <span class="option-number">方案 1</span>
+            <h2>Precision Slate</h2>
+            <p>
+              极简、冷静、偏专业控制台。弱化夸张玻璃，改成更克制的烟灰层次和线性结构，
+              让界面像真正的 Windows 专业工具。
+            </p>
+            <ul class="option-tags">
+              <li>更窄的左侧 rail</li>
+              <li>强调信息秩序</li>
+              <li>深色但不糊</li>
+            </ul>
+          </div>
+
+          <div class="mock-window precision-window">
+            <div class="window-topbar">
+              <div class="window-brand">
+                <span class="brand-badge">C</span>
+                <div>
+                  <strong>Claude Console</strong>
+                  <small>Precision mode</small>
+                </div>
+              </div>
+              <div class="topbar-search"></div>
+              <div class="window-actions">
+                <div class="theme-inline">
+                  <span>System</span>
+                  <span>Light</span>
+                  <span class="is-active">Dark</span>
+                  <span>Accent</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="window-body">
+              <aside class="sidebar-rail">
+                <div class="rail-group">
+                  <button class="rail-item">
+                    <span class="rail-icon"></span>
+                    <span>概览</span>
+                  </button>
+                  <button class="rail-item is-selected">
+                    <span class="rail-icon"></span>
+                    <span>API 配置</span>
+                  </button>
+                  <button class="rail-item">
+                    <span class="rail-icon"></span>
+                    <span>配置文件</span>
+                  </button>
+                  <button class="rail-item">
+                    <span class="rail-icon"></span>
+                    <span>MCP 服务器</span>
+                  </button>
+                </div>
+                <div class="rail-footer">
+                  <div class="accent-swatch blue"></div>
+                  <div class="footer-copy">
+                    <strong>自定义强调色</strong>
+                    <small>#6D98FF</small>
+                  </div>
+                </div>
+              </aside>
+
+              <section class="main-canvas">
+                <div class="canvas-header">
+                  <div>
+                    <h3>API 配置</h3>
+                    <p>为当前工作空间配置主模型、备用模型和密钥策略。</p>
+                  </div>
+                  <button class="primary-button">保存配置</button>
+                </div>
+
+                <div class="canvas-grid">
+                  <article class="panel panel-wide">
+                    <div class="panel-head">
+                      <strong>提供商</strong>
+                      <span>默认 / 自动回退</span>
+                    </div>
+                    <div class="provider-list">
+                      <div class="provider-row">
+                        <span>Anthropic</span>
+                        <small>api.anthropic.com</small>
+                      </div>
+                      <div class="provider-row is-active">
+                        <span>DeepSeek</span>
+                        <small>api.deepseek.com</small>
+                      </div>
+                      <div class="provider-row">
+                        <span>OpenAI</span>
+                        <small>api.openai.com</small>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="panel">
+                    <div class="panel-head">
+                      <strong>API Key</strong>
+                      <span>Credential Manager</span>
+                    </div>
+                    <div class="secret-field"></div>
+                    <div class="helper-row">
+                      <span class="status-dot"></span>
+                      <small>已同步到 Claude Code 配置</small>
+                    </div>
+                  </article>
+
+                  <article class="panel">
+                    <div class="panel-head">
+                      <strong>模型</strong>
+                      <span>2 个已启用</span>
+                    </div>
+                    <div class="model-chip-row">
+                      <span class="model-chip">deepseek-v4-flash</span>
+                      <span class="model-chip">claude-sonnet</span>
+                    </div>
+                  </article>
+
+                  <article class="panel panel-muted">
+                    <div class="panel-head">
+                      <strong>高级选项</strong>
+                      <span>Base URL / Timeout / Max Tokens</span>
+                    </div>
+                    <div class="form-lines">
+                      <span></span>
+                      <span></span>
+                      <span class="short"></span>
+                    </div>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="option-card frost" id="option-2">
+          <div class="option-meta">
+            <span class="option-number">方案 2</span>
+            <h2>Frosted Canvas</h2>
+            <p>
+              更像新一代 Windows 11 原生应用。整体更亮、更轻、更有呼吸感，玻璃集中在标题区和浮层，
+              主内容使用柔和分区，不再满屏暗盒子。
+            </p>
+            <ul class="option-tags">
+              <li>白色主题更高级</li>
+              <li>玻璃集中在关键层</li>
+              <li>适合长期使用</li>
+            </ul>
+          </div>
+
+          <div class="mock-window frost-window">
+            <div class="window-topbar light">
+              <div class="window-brand">
+                <span class="brand-badge lilac">C</span>
+                <div>
+                  <strong>Claude Console</strong>
+                  <small>Workspace settings</small>
+                </div>
+              </div>
+              <div class="window-actions">
+                <div class="theme-pills">
+                  <span>系统</span>
+                  <span class="is-active">白色</span>
+                  <span>黑色</span>
+                  <span>自定义</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="canvas-layout light">
+              <aside class="soft-sidebar">
+                <div class="workspace-card">
+                  <strong>当前工作区</strong>
+                  <p>Claude Code 主环境</p>
+                </div>
+                <div class="soft-nav">
+                  <button>概览</button>
+                  <button class="is-selected">API</button>
+                  <button>配置文件</button>
+                  <button>MCP</button>
+                  <button>Skills</button>
+                </div>
+                <div class="soft-footer-card">
+                  <strong>外观</strong>
+                  <div class="color-dots">
+                    <span class="dot system"></span>
+                    <span class="dot light"></span>
+                    <span class="dot dark"></span>
+                    <span class="dot custom"></span>
+                  </div>
+                </div>
+              </aside>
+
+              <section class="content-surface">
+                <div class="content-heading">
+                  <div>
+                    <h3>API 配置</h3>
+                    <p>优先配置主提供商，再设置模型和容灾策略。</p>
+                  </div>
+                  <div class="inline-actions">
+                    <button class="ghost-button">测试连接</button>
+                    <button class="primary-button light">保存</button>
+                  </div>
+                </div>
+
+                <div class="surface-stack">
+                  <article class="light-panel feature-panel">
+                    <div class="panel-split">
+                      <div>
+                        <strong>主提供商</strong>
+                        <p>DeepSeek 已启用，作为当前默认模型入口。</p>
+                      </div>
+                      <div class="provider-token">DeepSeek</div>
+                    </div>
+                  </article>
+
+                  <article class="light-panel">
+                    <strong>密钥与同步</strong>
+                    <div class="white-field"></div>
+                    <div class="sync-note">
+                      <span class="status-dot green"></span>
+                      <small>已同步到 Credential Manager 与 Claude Code</small>
+                    </div>
+                  </article>
+
+                  <div class="light-grid">
+                    <article class="light-panel compact">
+                      <strong>可用模型</strong>
+                      <div class="pill-list">
+                        <span>deepseek-v4-flash</span>
+                        <span>deepseek-r1</span>
+                      </div>
+                    </article>
+                    <article class="light-panel compact">
+                      <strong>高级配置</strong>
+                      <div class="form-lines light-lines">
+                        <span></span>
+                        <span class="short"></span>
+                        <span class="short"></span>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="option-card signal" id="option-3">
+          <div class="option-meta">
+            <span class="option-number">方案 3</span>
+            <h2>Signal Desk</h2>
+            <p>
+              更有产品感和控制中枢气质。让 API 配置不再只是表单，而是带有状态、摘要和任务流的操作面板，
+              适合管理器型软件。
+            </p>
+            <ul class="option-tags">
+              <li>左栏更像 command hub</li>
+              <li>主区含状态摘要</li>
+              <li>层级更鲜明</li>
+            </ul>
+          </div>
+
+          <div class="mock-window signal-window">
+            <div class="window-topbar vivid">
+              <div class="window-brand">
+                <span class="brand-badge coral">C</span>
+                <div>
+                  <strong>Claude Console</strong>
+                  <small>Signal workspace</small>
+                </div>
+              </div>
+              <div class="window-actions">
+                <div class="header-stat">2 providers active</div>
+                <button class="header-action">Publish profile</button>
+              </div>
+            </div>
+
+            <div class="signal-layout">
+              <aside class="signal-sidebar">
+                <div class="command-card">
+                  <strong>Workspace Control</strong>
+                  <p>连接、配置、同步、验证一站式完成。</p>
+                </div>
+                <div class="signal-nav">
+                  <button class="is-selected">API</button>
+                  <button>MCP</button>
+                  <button>Config</button>
+                  <button>Skills</button>
+                  <button>Env</button>
+                </div>
+                <div class="mode-stack">
+                  <span class="mode-pill">System</span>
+                  <span class="mode-pill">White</span>
+                  <span class="mode-pill is-active">Black</span>
+                  <span class="mode-pill accent">Custom</span>
+                </div>
+              </aside>
+
+              <section class="signal-main">
+                <div class="signal-header">
+                  <div>
+                    <h3>API 控制台</h3>
+                    <p>当前工作空间的主路由、备份路由和模型检测状态。</p>
+                  </div>
+                  <button class="primary-button coral">应用更改</button>
+                </div>
+
+                <div class="signal-grid">
+                  <article class="signal-summary">
+                    <div class="summary-card">
+                      <strong>默认提供商</strong>
+                      <span>DeepSeek</span>
+                    </div>
+                    <div class="summary-card">
+                      <strong>模型状态</strong>
+                      <span>2 / 2 可用</span>
+                    </div>
+                    <div class="summary-card">
+                      <strong>同步状态</strong>
+                      <span>Healthy</span>
+                    </div>
+                  </article>
+
+                  <article class="signal-panel">
+                    <div class="signal-panel-head">
+                      <strong>Provider Route</strong>
+                      <small>Primary / Backup / Manual</small>
+                    </div>
+                    <div class="route-list">
+                      <div class="route-item active">
+                        <span>DeepSeek</span>
+                        <small>Primary</small>
+                      </div>
+                      <div class="route-item">
+                        <span>OpenAI</span>
+                        <small>Backup</small>
+                      </div>
+                      <div class="route-item">
+                        <span>Anthropic</span>
+                        <small>Manual</small>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="signal-panel">
+                    <div class="signal-panel-head">
+                      <strong>Credential</strong>
+                      <small>Windows Credential Manager</small>
+                    </div>
+                    <div class="secret-field bright"></div>
+                    <div class="sync-note bright-note">
+                      <span class="status-dot green"></span>
+                      <small>Last synced 2 minutes ago</small>
+                    </div>
+                  </article>
+
+                  <article class="signal-panel wide">
+                    <div class="signal-panel-head">
+                      <strong>Model availability</strong>
+                      <small>Auto-detected</small>
+                    </div>
+                    <div class="signal-models">
+                      <span>deepseek-v4-flash</span>
+                      <span>deepseek-r1</span>
+                      <span>claude-sonnet</span>
+                    </div>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

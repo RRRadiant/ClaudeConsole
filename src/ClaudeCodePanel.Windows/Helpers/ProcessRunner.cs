@@ -65,7 +65,14 @@ public static class ProcessRunner
             var completed = await Task.WhenAny(exitTask, delayTask).ConfigureAwait(false);
             if (completed == delayTask)
             {
-                try { process.Kill(); } catch { /* process already exited */ }
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    SharedHelpers.SafeLog("ProcessRunner.RunAsync.Kill", ex, fileName);
+                }
                 return new ProcessResult(-1, "", "", true);
             }
 

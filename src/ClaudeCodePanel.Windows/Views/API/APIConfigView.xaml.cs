@@ -1,9 +1,11 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ClaudeCodePanel.Windows.Models;
+using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 
 namespace ClaudeCodePanel.Windows.Views.API;
@@ -43,6 +45,7 @@ public partial class APIConfigView : UserControl
     public APIConfigView()
     {
         InitializeComponent();
+        Unloaded += OnUnloaded;
     }
 
     // ── Loaded ─────────────────────────────────────────────────────────────
@@ -56,6 +59,11 @@ public partial class APIConfigView : UserControl
         ApplyLoadedConfig();
     }
 
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        FileWatcherService.Instance.OnChange -= OnConfigFileChanged;
+    }
+
     /// <summary>
     /// Applies the ViewModel's loaded configuration to all UI controls.
     /// Called once on Loaded and again after provider changes.
@@ -64,13 +72,16 @@ public partial class APIConfigView : UserControl
     {
         if (_vm == null) return;
 
+        FileWatcherService.Instance.OnChange -= OnConfigFileChanged;
+        FileWatcherService.Instance.OnChange += OnConfigFileChanged;
+
         _vm.LoadConfig();
 
         // Sync ViewModel -> UI fields
         ApiKeyField.Text = _vm.ApiKey;
         BaseUrlField.Text = _vm.BaseURL;
-        MaxTokensField.Text = _vm.MaxTokens.ToString();
-        TimeoutField.Text = _vm.Timeout.ToString();
+        MaxTokensField.Text = _vm.MaxTokens.ToString(CultureInfo.InvariantCulture);
+        TimeoutField.Text = _vm.Timeout.ToString(CultureInfo.InvariantCulture);
 
         // Build provider row buttons
         BuildProviderRows();
@@ -80,6 +91,18 @@ public partial class APIConfigView : UserControl
 
         // Refresh model lists
         RefreshModelLists();
+    }
+
+    private void OnConfigFileChanged(string path)
+    {
+        var configService = ConfigFileService.Instance;
+        if (!path.Equals(configService.SettingsPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals(configService.SettingsLocalPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        ApplyLoadedConfig();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -114,51 +137,50 @@ public partial class APIConfigView : UserControl
         ProviderList.Children.Clear();
 
         var providers = APIProviderExtensions.AllCases;
-        for (int i = 0; i < providers.Length; i++)
+        foreach (var provider in providers)
         {
-            var provider = providers[i];
             var isSelected = _vm.SelectedProvider == provider;
 
-            // ── Row button ───────────────────────────────────────────────
             var rowBtn = new Button
             {
                 Tag = provider,
-                Padding = new Thickness(12),
-                Background = isSelected ? T("SelectionBackgroundBrush") : Brushes.Transparent,
-                BorderThickness = new Thickness(0),
+                Style = TryFindResource("ProviderRowButtonStyle") as Style,
+                Padding = new Thickness(16, 14, 16, 14),
+                Margin = new Thickness(0, 0, 0, 10),
+                Background = isSelected ? T("AccentSubtleBrush") : T("GlassCardBgBrush"),
+                BorderBrush = isSelected ? T("BorderAccentBrush") : T("BorderDefaultBrush"),
+                BorderThickness = new Thickness(1),
                 Cursor = System.Windows.Input.Cursors.Hand,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch
             };
             rowBtn.Click += OnProviderClick;
 
-            // ── Row layout grid ──────────────────────────────────────────
             var rowGrid = new Grid();
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });  // icon
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // name+url
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });  // checkmark
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            // Icon
             var icon = new TextBlock
             {
                 Text = provider.IconGlyph(),
                 FontFamily = new FontFamily("Segoe MDL2 Assets"),
-                FontSize = 18,
+                FontSize = 17,
                 Foreground = isSelected ? T("AccentBrush") : T("TextSecondaryBrush"),
                 VerticalAlignment = VerticalAlignment.Center
             };
             Grid.SetColumn(icon, 0);
             rowGrid.Children.Add(icon);
 
-            // Name + Base URL stack
             var textStack = new StackPanel
             {
-                Margin = new Thickness(12, 0, 0, 0),
+                Margin = new Thickness(14, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
             textStack.Children.Add(new TextBlock
             {
                 Text = provider.DisplayName(),
-                FontSize = 17,
+                FontSize = 15,
+                FontWeight = FontWeights.SemiBold,
                 Foreground = T("TextPrimaryBrush")
             });
             var baseURL = provider.DefaultBaseURL();
@@ -174,12 +196,11 @@ public partial class APIConfigView : UserControl
             Grid.SetColumn(textStack, 1);
             rowGrid.Children.Add(textStack);
 
-            // Checkmark (visible only when selected)
             var checkmark = new TextBlock
             {
                 Text = "\xE10B", // CheckMark glyph
                 FontFamily = new FontFamily("Segoe MDL2 Assets"),
-                FontSize = 14,
+                FontSize = 15,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = T("AccentBrush"),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -190,13 +211,6 @@ public partial class APIConfigView : UserControl
 
             rowBtn.Content = rowGrid;
             ProviderList.Children.Add(rowBtn);
-
-            // Divider between rows (except after last)
-            if (i < providers.Length - 1)
-            {
-                var divider = new ClaudeCodePanel.Windows.Views.Shared.GlassDivider();
-                ProviderList.Children.Add(divider);
-            }
         }
     }
 
@@ -409,11 +423,11 @@ public partial class APIConfigView : UserControl
     {
         var border = new Border
         {
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(16, 14, 16, 14),
             Margin = new Thickness(0, 4, 0, 0),
             Background = T("GlassCardBgBrush"),
-            BorderBrush = T("BorderCardBrush"),
+            BorderBrush = T("BorderDefaultBrush"),
             BorderThickness = new Thickness(1)
         };
 
@@ -483,11 +497,11 @@ public partial class APIConfigView : UserControl
     /// Used for both detected models and recommended models.
     /// Matches Swift: plus.circle with accentColor foreground
     /// </summary>
-    private Grid CreateAddModelRow(string model, bool isDetected)
+    private Border CreateAddModelRow(string model, bool isDetected)
     {
         var grid = new Grid
         {
-            Margin = new Thickness(0, 2, 0, 2)
+            Margin = new Thickness(0)
         };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -511,7 +525,8 @@ public partial class APIConfigView : UserControl
             {
                 Text = desc,
                 FontSize = 12,
-                Foreground = T("TextSecondaryBrush")
+                Foreground = T("TextSecondaryBrush"),
+                Margin = new Thickness(0, 3, 0, 0)
             });
             Grid.SetColumn(modelStack, 0);
             grid.Children.Add(modelStack);
@@ -550,7 +565,16 @@ public partial class APIConfigView : UserControl
         Grid.SetColumn(addBtn, 1);
         grid.Children.Add(addBtn);
 
-        return grid;
+        return new Border
+        {
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14, 12, 14, 12),
+            Margin = new Thickness(0, 0, 0, 8),
+            Background = T("SurfaceBrush"),
+            BorderBrush = isDetected ? T("BorderAccentBrush") : T("BorderDefaultBrush"),
+            BorderThickness = new Thickness(1),
+            Child = grid
+        };
     }
 
     // ═══════════════════════════════════════════════════════════════════════

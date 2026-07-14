@@ -66,6 +66,9 @@ public partial class MCPManagerViewModel : ObservableObject
     private bool _newEnabled = true;
 
     [ObservableProperty]
+    private string _newProjectPath = "";
+
+    [ObservableProperty]
     private List<string> _newArgs = new();
 
     [ObservableProperty]
@@ -150,6 +153,7 @@ public partial class MCPManagerViewModel : ObservableObject
             SharedHelpers.SafeLog("MCPManagerViewModel.LoadServers", ex);
         }
 
+        _connectionResults.Clear();
         Servers.Clear();
         foreach (var s in mergedServers)
             Servers.Add(s);
@@ -171,6 +175,7 @@ public partial class MCPManagerViewModel : ObservableObject
         NewArgs = new List<string>(server.Args);
         NewEnv = server.Env.Select(kvp => (kvp.Key, kvp.Value)).ToList();
         NewEnabled = server.Enabled;
+        NewProjectPath = server.ProjectPath ?? "";
         IsAddingServer = true;
     }
 
@@ -198,12 +203,7 @@ public partial class MCPManagerViewModel : ObservableObject
                     .Where(e => !string.IsNullOrEmpty(e.Key))
                     .ToDictionary(e => e.Key, e => e.Value)
                 : new Dictionary<string, string>();
-
-            if (server.ServerType is MCPServerType.Builtin or MCPServerType.Plugin &&
-                string.IsNullOrEmpty(server.ProjectPath))
-            {
-                server.ProjectPath = Directory.GetCurrentDirectory();
-            }
+            server.ProjectPath = ResolveProjectPath(NewProjectPath, server.ServerType);
         }
         else
         {
@@ -222,9 +222,7 @@ public partial class MCPManagerViewModel : ObservableObject
                         .Where(e => !string.IsNullOrEmpty(e.Key))
                         .ToDictionary(e => e.Key, e => e.Value)
                     : new Dictionary<string, string>(),
-                ProjectPath = NewServerType is MCPServerType.Builtin or MCPServerType.Plugin
-                    ? Directory.GetCurrentDirectory()
-                    : null
+                ProjectPath = ResolveProjectPath(NewProjectPath, NewServerType)
             };
             Servers.Add(server);
         }
@@ -284,19 +282,17 @@ public partial class MCPManagerViewModel : ObservableObject
     private Task PersistToClaudeJSONAsync()
     {
         var claudePath = _configFileService.ClaudeGlobalConfigPath;
-        var currentProjectPath = Directory.GetCurrentDirectory();
-
         // Read existing .claude.json — preserve every key we don't own
         Dictionary<string, JsonElement> rootDict;
         try
         {
-            rootDict = _configFileService.ReadJSON(claudePath)
-                       ?? new Dictionary<string, JsonElement>();
+            rootDict = _configFileService.ReadJSONOrEmpty(claudePath);
         }
         catch (Exception ex)
         {
             SharedHelpers.SafeLog("MCPManagerViewModel.PersistToClaudeJSON", ex);
-            rootDict = new Dictionary<string, JsonElement>();
+            ErrorMessage = $".claude.json 无法读取，已停止写入: {ex.Message}";
+            return Task.CompletedTask;
         }
 
         Dictionary<string, JsonElement> projects;
@@ -314,19 +310,16 @@ public partial class MCPManagerViewModel : ObservableObject
         var topLevelServers = new Dictionary<string, object>();
         var projectServersByPath = new Dictionary<string, Dictionary<string, object>>();
         var projectPluginStatesByPath = new Dictionary<string, Dictionary<string, bool>>();
-        var touchedProjectPaths = new HashSet<string>(projects.Keys, StringComparer.OrdinalIgnoreCase)
-        {
-            currentProjectPath
-        };
+        var touchedProjectPaths = new HashSet<string>(projects.Keys, StringComparer.OrdinalIgnoreCase);
 
         foreach (var server in Servers)
         {
             if (!string.IsNullOrEmpty(server.ProjectPath) ||
                 server.ServerType is MCPServerType.Builtin or MCPServerType.Plugin)
             {
-                var projectPath = string.IsNullOrEmpty(server.ProjectPath)
-                    ? currentProjectPath
-                    : server.ProjectPath;
+                var projectPath = ResolveProjectPath(server.ProjectPath, server.ServerType);
+                if (string.IsNullOrEmpty(projectPath))
+                    continue;
                 touchedProjectPaths.Add(projectPath);
 
                 if (server.ServerType is MCPServerType.Builtin or MCPServerType.Plugin)
@@ -393,7 +386,7 @@ public partial class MCPManagerViewModel : ObservableObject
                 else
                     projectData.Remove("disabledMcpjsonServers");
             }
-            else if (projectPath.Equals(currentProjectPath, StringComparison.OrdinalIgnoreCase))
+            else
             {
                 projectData.Remove("enabledMcpjsonServers");
                 projectData.Remove("disabledMcpjsonServers");
@@ -462,6 +455,7 @@ public partial class MCPManagerViewModel : ObservableObject
         NewUrl = "";
         NewServerType = MCPServerType.Stdio;
         NewEnabled = true;
+        NewProjectPath = "";
         NewArgs = new List<string>();
         NewEnv = new List<(string, string)>();
         NewArgInput = "";
@@ -517,5 +511,16 @@ public partial class MCPManagerViewModel : ObservableObject
             NewEnvKeyInput = "";
             NewEnvValueInput = "";
         }
+    }
+
+    private static string? ResolveProjectPath(string? projectPath, MCPServerType serverType)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim();
+        if (!string.IsNullOrEmpty(trimmed))
+            return trimmed;
+
+        return serverType is MCPServerType.Builtin or MCPServerType.Plugin
+            ? Directory.GetCurrentDirectory()
+            : null;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -372,6 +373,6 @@ public partial class SkillCard : UserControl
             var remainder = (count % 1000) / 100;
             return $"{thousands}.{remainder}k";
         }
-        return count.ToString();
+        return count.ToString(CultureInfo.InvariantCulture);
     }
 }

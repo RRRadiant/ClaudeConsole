@@ -1,5 +1,6 @@
 using ClaudeCodePanel.Windows.Models;
 using ClaudeCodePanel.Windows.Services;
+using System.Text.Json;
 
 namespace ClaudeCodePanel.Windows.Tests.Services;
 
@@ -143,5 +144,34 @@ public class SyncServiceApplyEnvTests
         Assert.Contains("review", result);
         Assert.Contains("qa", result);
         Assert.DoesNotContain("test", result);
+    }
+
+    [Fact]
+    public void MergeProjectScopedServerStates_AddsEnabledAndDisabledEntriesForEachProject()
+    {
+        var servers = new List<MCPServerConfig>();
+        var projectData = new Dictionary<string, JsonElement>
+        {
+            ["enabledMcpjsonServers"] = JsonSerializer.SerializeToElement(new[] { "plugin:lint", "builtin-a" }),
+            ["disabledMcpjsonServers"] = JsonSerializer.SerializeToElement(new[] { "plugin:scan" })
+        };
+
+        SyncService.MergeProjectScopedServerStates(servers, "/workspace/demo", projectData);
+
+        Assert.Contains(servers, server =>
+            server.Name == "plugin:lint" &&
+            server.ServerType == MCPServerType.Plugin &&
+            server.Enabled &&
+            server.ProjectPath == "/workspace/demo");
+        Assert.Contains(servers, server =>
+            server.Name == "builtin-a" &&
+            server.ServerType == MCPServerType.Builtin &&
+            server.Enabled &&
+            server.ProjectPath == "/workspace/demo");
+        Assert.Contains(servers, server =>
+            server.Name == "plugin:scan" &&
+            server.ServerType == MCPServerType.Plugin &&
+            !server.Enabled &&
+            server.ProjectPath == "/workspace/demo");
     }
 }

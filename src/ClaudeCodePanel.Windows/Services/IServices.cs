@@ -15,7 +15,9 @@ public interface IConfigFileService
     string McpPath { get; }
     string SkillsDirectory { get; }
     string ClaudeGlobalConfigPath { get; }
+    Dictionary<string, JsonElement>? TryReadJSON(string path);
     Dictionary<string, JsonElement>? ReadJSON(string path);
+    Dictionary<string, JsonElement> ReadJSONOrEmpty(string path);
     void WriteJSON(Dictionary<string, JsonElement> dict, string path, DateTime? expectedMtime = null);
     void EnsureDirectoryExists(string path);
 }

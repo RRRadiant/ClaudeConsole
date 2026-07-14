@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -76,6 +77,8 @@ namespace ClaudeCodePanel.Windows.Views
         // ── Drag region state ────────────────────────────────────────────────
 
         private readonly MainViewModel _mainViewModel;
+        private PropertyChangedEventHandler? _themeServicePropertyChangedHandler;
+        private SizeChangedEventHandler? _sizeChangedHandler;
 
         // ── Constructor ──────────────────────────────────────────────────────
 
@@ -94,6 +97,7 @@ namespace ClaudeCodePanel.Windows.Views
 
             // Keep the maximize/restore button glyph in sync with window state.
             StateChanged += OnWindowStateChanged;
+            Closed += OnClosed;
         }
 
         // ── Source Initialized (Mica + edge resize hook) ──────────────────────
@@ -129,25 +133,46 @@ namespace ClaudeCodePanel.Windows.Views
         {
             Loaded -= OnMainWindowLoaded;
             UpdateTitleBarBlur();
-            SizeChanged += (_, _) => UpdateTitleBarBlur();
-            ThemeService.Instance.PropertyChanged += async (_, e) =>
+            _sizeChangedHandler ??= (_, _) => UpdateTitleBarBlur();
+            SizeChanged -= _sizeChangedHandler;
+            SizeChanged += _sizeChangedHandler;
+
+            _themeServicePropertyChangedHandler ??= OnThemeServicePropertyChanged;
+            ThemeService.Instance.PropertyChanged -= _themeServicePropertyChangedHandler;
+            ThemeService.Instance.PropertyChanged += _themeServicePropertyChangedHandler;
+        }
+
+        private void OnClosed(object? sender, EventArgs e)
+        {
+            _mainViewModel.PropertyChanged -= OnSelectedPanelViewModelChanged;
+            StateChanged -= OnWindowStateChanged;
+
+            if (_sizeChangedHandler != null)
+                SizeChanged -= _sizeChangedHandler;
+
+            if (_themeServicePropertyChangedHandler != null)
+                ThemeService.Instance.PropertyChanged -= _themeServicePropertyChangedHandler;
+
+            Closed -= OnClosed;
+        }
+
+        private async void OnThemeServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(ThemeService.AppearanceRevision))
+                return;
+
+            Dispatcher.Invoke(() =>
             {
-                if (e.PropertyName != nameof(ThemeService.AppearanceRevision))
-                    return;
+                Windows11Interop.ApplyTitleBarTheme(this, ThemeService.Instance.IsDarkTheme);
+                UpdateTitleBarBlur();
+            });
 
-                Dispatcher.Invoke(() =>
-                {
-                    Windows11Interop.ApplyTitleBarTheme(this, ThemeService.Instance.IsDarkTheme);
-                    UpdateTitleBarBlur();
-                });
-
-                // Force WPF to destroy and recreate the current View so all
-                // DynamicResource are re-resolved against the latest appearance state.
-                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
-                var current = _mainViewModel.SelectedPanelViewModel;
-                ContentArea.Content = null;
-                ContentArea.Content = current;
-            };
+            // Force WPF to destroy and recreate the current View so all
+            // DynamicResource are re-resolved against the latest appearance state.
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+            var current = _mainViewModel.SelectedPanelViewModel;
+            ContentArea.Content = null;
+            ContentArea.Content = current;
         }
 
         /// <summary>
@@ -211,9 +236,9 @@ namespace ClaudeCodePanel.Windows.Views
                 // Apply bitmap cache for performance
                 TitleBarBlurImage.CacheMode = new System.Windows.Media.BitmapCache(1.0);
             }
-            catch
+            catch (Exception ex)
             {
-                // Blur capture is best-effort; fall back to semi-transparent solid
+                SharedHelpers.SafeLog("MainWindow.UpdateTitleBarBlur", ex);
                 TitleBarBlurImage.Visibility = Visibility.Collapsed;
             }
         }
@@ -297,14 +322,14 @@ namespace ClaudeCodePanel.Windows.Views
         /// region falls outside the screen and the visible content fills the
         /// entire working area edge-to-edge.
         /// </summary>
-        private void ConstrainMaxSizeToWorkingArea(IntPtr hwnd, IntPtr lParam)
+        private static void ConstrainMaxSizeToWorkingArea(IntPtr hwnd, IntPtr lParam)
         {
             var hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
             if (hMonitor == IntPtr.Zero)
                 return;
 
             var monitorInfo = new MONITORINFO();
-            monitorInfo.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+            monitorInfo.cbSize = Marshal.SizeOf<MONITORINFO>();
             GetMonitorInfo(hMonitor, ref monitorInfo);
 
             var rc = monitorInfo.rcWork;

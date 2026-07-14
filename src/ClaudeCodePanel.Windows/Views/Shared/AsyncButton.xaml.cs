@@ -1,3 +1,4 @@
+#pragma warning disable CA1716
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -461,3 +462,4 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         Task ExecuteAsync(object parameter);
     }
 }
+#pragma warning restore CA1716

@@ -29,6 +29,13 @@
                       IsChecked="True"
                       Margin="0,0,0,16"/>
 
+            <StackPanel x:Name="ProjectPathSection">
+                <TextBlock Text="项目路径" FontSize="15" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <shared:GlassTextField x:Name="ProjectPathField" Variant="Regular"
+                                       Placeholder="留空表示全局；内置/插件默认当前目录" Margin="0,0,0,16"/>
+            </StackPanel>
+
             <!-- URL -->
             <StackPanel x:Name="UrlSection" Visibility="Collapsed">
                 <TextBlock Text="URL" FontSize="15" Margin="0,0,0,6"

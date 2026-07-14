@@ -56,11 +56,8 @@ public partial class DashboardViewModel : ObservableObject
 
             // ── Launch independent operations concurrently ──
             var claudeStatusTask = InstallerService.Instance.GetClaudeStatusAsync();
-            var settingsTask = Task.Run(() =>
-            {
-                try { return _configFileService.ReadJSON(_configFileService.SettingsPath); }
-                catch { return null; }
-            });
+            var syncedTask = Task.Run(() => SyncService.Instance.SyncAll());
+            var settingsTask = Task.Run(() => _configFileService.TryReadJSON(_configFileService.SettingsPath));
             var mcpTask = Task.Run(() =>
             {
                 try
@@ -94,20 +91,27 @@ public partial class DashboardViewModel : ObservableObject
                 catch (Exception ex) { SharedHelpers.SafeLog("DashboardViewModel.LoadSummary.Skills", ex); return 0; }
             });
 
-            await Task.WhenAll(claudeStatusTask, settingsTask, mcpTask, skillsTask).ConfigureAwait(true);
+            await Task.WhenAll(claudeStatusTask, syncedTask, settingsTask, mcpTask, skillsTask).ConfigureAwait(true);
 
             // ── Collect results ──
             var status = await claudeStatusTask;
             bool claudeInstalled = status.Installed;
             string claudeVersion = status.Version ?? "";
+            var synced = await syncedTask;
+            var hasSyncedApiConfig =
+                synced.DidSync &&
+                (!string.IsNullOrEmpty(synced.ApiKey) ||
+                 !string.IsNullOrEmpty(synced.BaseURL) ||
+                 synced.EnabledModels.Count > 0);
 
             var settingsDict = await settingsTask;
-            int enabledModelsCount = 0;
-            APIProvider? configuredProvider = null;
+            int enabledModelsCount = hasSyncedApiConfig ? synced.EnabledModels.Count : 0;
+            APIProvider? configuredProvider = hasSyncedApiConfig ? synced.Provider : null;
 
-            if (settingsDict != null)
+            if (settingsDict != null && (enabledModelsCount == 0 || !configuredProvider.HasValue))
             {
-                if (settingsDict.TryGetValue("enabledModels", out var element) &&
+                if (enabledModelsCount == 0 &&
+                    settingsDict.TryGetValue("enabledModels", out var element) &&
                     element.ValueKind == JsonValueKind.Array)
                 {
                     enabledModelsCount = element.EnumerateArray()
@@ -116,7 +120,8 @@ public partial class DashboardViewModel : ObservableObject
                         .Count();
                 }
 
-                if (settingsDict.TryGetValue("provider", out var providerElement))
+                if (!configuredProvider.HasValue &&
+                    settingsDict.TryGetValue("provider", out var providerElement))
                 {
                     var providerStr = providerElement.GetString()?.ToLowerInvariant();
                     configuredProvider = providerStr switch
@@ -130,22 +135,26 @@ public partial class DashboardViewModel : ObservableObject
                 }
             }
 
-            var (totalMCPServersCount, activeMCPServersCount) = await mcpTask;
-            var installedSkillsCount = await skillsTask;
-            var synced = SyncService.Instance.SyncAll();
+            var (fileTotalMCPServersCount, fileActiveMCPServersCount) = await mcpTask;
+            var fileInstalledSkillsCount = await skillsTask;
+            var totalMCPServersCount = synced.DidSync && synced.McpServers.Count > 0
+                ? synced.McpServers.Count
+                : fileTotalMCPServersCount;
+            var activeMCPServersCount = synced.DidSync && synced.McpServers.Count > 0
+                ? synced.McpServers.Count(static s => s.Enabled)
+                : fileActiveMCPServersCount;
+            var installedSkillsCount = synced.DidSync && synced.SkillIds.Count > 0
+                ? synced.SkillIds.Count
+                : fileInstalledSkillsCount;
 
             // ── API credential check ──
             bool apiConnected = false;
             string apiProvider = "";
             APIProvider? effectiveProvider = configuredProvider;
-            if (!effectiveProvider.HasValue &&
-                synced.DidSync &&
-                (!string.IsNullOrEmpty(synced.BaseURL) || !string.IsNullOrEmpty(synced.ApiKey)))
-            {
-                effectiveProvider = synced.Provider;
-            }
 
-            if (effectiveProvider.HasValue && _credentialService.Exists(effectiveProvider.Value.CredentialKey()))
+            if (effectiveProvider.HasValue &&
+                (hasSyncedApiConfig || settingsDict?.ContainsKey("provider") == true) &&
+                _credentialService.Exists(effectiveProvider.Value.CredentialKey()))
             {
                 apiConnected = true;
                 apiProvider = effectiveProvider.Value.DisplayName();
@@ -159,13 +168,6 @@ public partial class DashboardViewModel : ObservableObject
                     apiConnected = true;
                     apiProvider = synced.Provider.DisplayName();
                 }
-                if (totalMCPServersCount == 0 && synced.McpServers.Count > 0)
-                {
-                    totalMCPServersCount = synced.McpServers.Count;
-                    activeMCPServersCount = synced.McpServers.Count(s => s.Enabled);
-                }
-                if (installedSkillsCount == 0 && synced.SkillIds.Count > 0)
-                    installedSkillsCount = synced.SkillIds.Count;
                 if (enabledModelsCount == 0 && synced.EnabledModels.Count > 0)
                     enabledModelsCount = synced.EnabledModels.Count;
             }

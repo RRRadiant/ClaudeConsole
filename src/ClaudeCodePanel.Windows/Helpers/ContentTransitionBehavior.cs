@@ -63,7 +63,7 @@ public static class ContentTransitionBehavior
     /// <param name="newContent">The new content to display.</param>
     public static async Task TransitionToAsync(ContentControl cc, object newContent)
     {
-        if (cc == null) throw new ArgumentNullException(nameof(cc));
+        ArgumentNullException.ThrowIfNull(cc);
 
         bool isFirst = GetIsFirstTransition(cc);
 
@@ -92,7 +92,7 @@ public static class ContentTransitionBehavior
 
     // ── Exit animation (180 ms, gentle ease-in) ─
 
-    private static Task AnimateExitAsync(FrameworkElement element)
+    private static Task<bool> AnimateExitAsync(FrameworkElement element)
     {
         var tcs = new TaskCompletionSource<bool>();
 
@@ -132,7 +132,7 @@ public static class ContentTransitionBehavior
 
     // ── Entrance animation (280 ms, ease-out) ──────────────────────
 
-    private static Task AnimateEntranceAsync(FrameworkElement element)
+    private static Task<bool> AnimateEntranceAsync(FrameworkElement element)
     {
         var tcs = new TaskCompletionSource<bool>();
 

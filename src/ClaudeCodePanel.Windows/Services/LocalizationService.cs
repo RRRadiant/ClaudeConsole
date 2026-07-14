@@ -17,7 +17,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     private static readonly ResourceManager _resManager =
         new("ClaudeCodePanel.Windows.Resources.Strings", typeof(LocalizationService).Assembly);
 
-    public bool IsChinese => CultureInfo.CurrentUICulture.Name.StartsWith("zh");
+    private CultureInfo _currentCulture = CultureInfo.CurrentUICulture;
+
+    public bool IsChinese => _currentCulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -26,14 +28,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>Gets a localized string by key.</summary>
     public string Get(string key)
     {
-        return _resManager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
+        return _resManager.GetString(key, _currentCulture) ?? key;
     }
 
     /// <summary>Gets a formatted localized string.</summary>
     public string Get(string key, params object[] args)
     {
         var fmt = Get(key);
-        return string.Format(fmt, args);
+        return string.Format(CultureInfo.InvariantCulture, fmt, args);
     }
 
     /// <summary>Toggles between Chinese and English.</summary>
@@ -46,7 +48,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>Sets the UI language.</summary>
     public void SetLanguage(string culture)
     {
-        CultureInfo.CurrentUICulture = new CultureInfo(culture);
+        _currentCulture = new CultureInfo(culture);
+        CultureInfo.CurrentUICulture = _currentCulture;
         OnPropertyChanged(nameof(IsChinese));
         OnPropertyChanged("Item[]"); // notify all bindings
     }

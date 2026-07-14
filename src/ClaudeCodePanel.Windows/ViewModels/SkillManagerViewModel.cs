@@ -22,7 +22,7 @@ public partial class SkillManagerViewModel : ObservableObject
     // ── Services ──────────────────────────────────────────────────
 
     private readonly ISkillRepositoryService _skillRepo;
-    private readonly ISyncService _syncService;
+    private readonly SyncService _syncService;
     private readonly IConfigFileService _configFileService;
 
     // ── Constructor ───────────────────────────────────────────────
@@ -228,7 +228,7 @@ public partial class SkillManagerViewModel : ObservableObject
             return;
 
         var url = SearchQuery.Trim();
-        if (!url.StartsWith("http"))
+        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             url = $"https://github.com/{url}";
 
         IsInstalling = true;
@@ -239,7 +239,7 @@ public partial class SkillManagerViewModel : ObservableObject
                 _skillRepo.InstallSkill(
                     id: GithubUrlSkill.Id,
                     source: SkillSource.GitURL,
-                    pathOrURL: url.EndsWith(".git") ? url : url + ".git");
+                    pathOrURL: url.EndsWith(".git", StringComparison.OrdinalIgnoreCase) ? url : url + ".git");
             });
 
             GithubUrlSkill.IsInstalled = true;
@@ -291,10 +291,8 @@ public partial class SkillManagerViewModel : ObservableObject
         {
             foreach (var id in synced.SkillIds)
             {
-                if (!seenIDs.Contains(id))
+                if (seenIDs.Add(id))
                 {
-                    seenIDs.Add(id);
-
                     // Check whether the skill directory exists on disk
                     var skillPath = Path.Combine(
                         _configFileService.SkillsDirectory,
@@ -402,8 +400,16 @@ public partial class SkillManagerViewModel : ObservableObject
     public void ToggleSkill(SkillItem skill)
     {
         var nextState = !skill.IsEnabled;
-        PersistPluginState(skill.Id, nextState);
-        skill.IsEnabled = nextState;
+        try
+        {
+            PersistPluginState(skill.Id, nextState);
+            skill.IsEnabled = nextState;
+            ErrorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
 
     /// <summary>
@@ -536,9 +542,7 @@ public partial class SkillManagerViewModel : ObservableObject
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        var rootDict = useLocalSettings
-            ? pluginSettings.LocalDict ?? new Dictionary<string, JsonElement>()
-            : pluginSettings.SettingsDict ?? new Dictionary<string, JsonElement>();
+        var rootDict = _configFileService.ReadJSONOrEmpty(settingsPath);
 
         WritePluginState(rootDict, skillId, isEnabled);
         _configFileService.WriteJSON(rootDict, settingsPath);

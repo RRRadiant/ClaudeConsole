@@ -39,7 +39,7 @@ public sealed class MCPService : IMCPService
         };
     }
 
-    private async Task<MCPConnectionResult> TestSSEConnectionAsync(MCPServerConfig config)
+    private static async Task<MCPConnectionResult> TestSSEConnectionAsync(MCPServerConfig config)
     {
         if (string.IsNullOrWhiteSpace(config.Url))
             return MCPConnectionResult.Failure("无效的 URL");
@@ -71,7 +71,7 @@ public sealed class MCPService : IMCPService
         }
     }
 
-    private async Task<MCPConnectionResult> TestStdioConnectionAsync(MCPServerConfig config)
+    private static async Task<MCPConnectionResult> TestStdioConnectionAsync(MCPServerConfig config)
     {
         if (string.IsNullOrWhiteSpace(config.Command))
             return MCPConnectionResult.Failure("命令不能为空");

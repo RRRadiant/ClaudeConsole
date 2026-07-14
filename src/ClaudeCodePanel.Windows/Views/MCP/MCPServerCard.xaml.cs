@@ -105,7 +105,7 @@ public partial class MCPServerCard : UserControl
         var effectiveName = MCPDisplayNameStore.EffectiveName(server);
         EffectiveNameLabel.Text = effectiveName;
 
-        var displayName = MCPDisplayNameStore.DisplayName(server.Id);
+        var displayName = MCPDisplayNameStore.DisplayName(server.PersistentKey);
         if (displayName != null)
         {
             OriginalNameHint.Text = $"(原名: {server.Name})";
@@ -367,7 +367,7 @@ public partial class MCPServerCard : UserControl
         if (Server == null) return;
 
         if (RenameInput != null)
-            RenameInput.Text = MCPDisplayNameStore.DisplayName(Server.Id) ?? Server.Name;
+            RenameInput.Text = MCPDisplayNameStore.DisplayName(Server.PersistentKey) ?? Server.Name;
 
         RenameEditPanel.Visibility = Visibility.Visible;
         RenameIdleBtn.Visibility = Visibility.Collapsed;
@@ -409,11 +409,11 @@ public partial class MCPServerCard : UserControl
         if (string.IsNullOrEmpty(trimmed) || trimmed == Server.Name)
         {
             // Reset — use config name
-            MCPDisplayNameStore.SetDisplayName(null, Server.Id);
+            MCPDisplayNameStore.SetDisplayName(null, Server.PersistentKey);
         }
         else
         {
-            MCPDisplayNameStore.SetDisplayName(trimmed, Server.Id);
+            MCPDisplayNameStore.SetDisplayName(trimmed, Server.PersistentKey);
         }
 
         RenameInput.Text = "";

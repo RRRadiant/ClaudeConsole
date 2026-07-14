@@ -332,7 +332,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
 
         // ── Animation Helpers ─────────────────────────────────────────────
 
-        private void SetColor(SolidColorBrush brush, Color color)
+        private static void SetColor(SolidColorBrush brush, Color color)
         {
             brush.BeginAnimation(SolidColorBrush.ColorProperty, null);
             brush.Color = color;

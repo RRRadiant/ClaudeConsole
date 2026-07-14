@@ -21,18 +21,21 @@ public partial class SidebarView : UserControl
     private readonly Dictionary<Button, Border> _buttonToAccentBar = new();
     private bool _isLoaded;
     private bool _hasPlayedEntrance;
+    private bool _isViewModelAttached;
 
     public SidebarView()
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
         DataContextChanged += OnDataContextChanged;
-        ThemeService.Instance.PropertyChanged += OnThemeServicePropertyChanged;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _isLoaded = true;
+        ThemeService.Instance.PropertyChanged -= OnThemeServicePropertyChanged;
+        ThemeService.Instance.PropertyChanged += OnThemeServicePropertyChanged;
         UpdateAppearanceSection();
         UpdateLanguageToggleLabel();
 
@@ -44,15 +47,18 @@ public partial class SidebarView : UserControl
         }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        _isLoaded = false;
+        ThemeService.Instance.PropertyChanged -= OnThemeServicePropertyChanged;
+        DetachViewModel();
+    }
+
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (e.OldValue is MainViewModel oldVm)
-            oldVm.PropertyChanged -= OnViewModelPropertyChanged;
-
+        DetachViewModel();
         _viewModel = e.NewValue as MainViewModel;
-
-        if (_viewModel != null)
-            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        AttachViewModel();
 
         if (_isLoaded)
             RefreshSelectionVisuals();
@@ -60,12 +66,24 @@ public partial class SidebarView : UserControl
 
     private void AttachViewModel()
     {
-        if (_viewModel != null)
+        if (_isViewModelAttached)
             return;
 
-        _viewModel = DataContext as MainViewModel;
+        _viewModel ??= DataContext as MainViewModel;
         if (_viewModel != null)
+        {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _isViewModelAttached = true;
+        }
+    }
+
+    private void DetachViewModel()
+    {
+        if (_viewModel == null || !_isViewModelAttached)
+            return;
+
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _isViewModelAttached = false;
     }
 
     private void OnThemeServicePropertyChanged(object? sender, PropertyChangedEventArgs e)

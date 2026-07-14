@@ -268,7 +268,7 @@ public sealed class ThemeService : INotifyPropertyChanged
         SetBrushResource("BorderAccentBrush", border);
     }
 
-    private void SetBrushResource(string key, Color color)
+    private static void SetBrushResource(string key, Color color)
     {
         Application.Current.Resources[key] = new SolidColorBrush(color);
     }

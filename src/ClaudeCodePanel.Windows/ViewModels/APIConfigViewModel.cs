@@ -290,7 +290,7 @@ public partial class APIConfigViewModel : ObservableObject
     /// and settings.json.
     /// </summary>
     [RelayCommand]
-    public async Task SaveConfigAsync()
+    public Task SaveConfigAsync()
     {
         try
         {
@@ -321,13 +321,7 @@ public partial class APIConfigViewModel : ObservableObject
                 Directory.CreateDirectory(dir);
 
             // Read existing file first to preserve all other keys
-            Dictionary<string, JsonElement> rootDict;
-            try { rootDict = _configFileService.ReadJSON(settingsPath) ?? new(); }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[APIConfigViewModel] SaveConfigAsync ReadJSON failed: {ex.Message}");
-                rootDict = new();
-            }
+            var rootDict = _configFileService.ReadJSONOrEmpty(settingsPath);
 
             // Merge/update the "env" object
             Dictionary<string, JsonElement> envDict = new();
@@ -355,9 +349,9 @@ public partial class APIConfigViewModel : ObservableObject
             SetEnv("ANTHROPIC_DEFAULT_HAIKU_MODEL", "");
             if (EnabledModels.Count > 1)
             {
-                var ops = EnabledModels.Where(m => m.ToLowerInvariant().Contains("opus")).FirstOrDefault();
-                var son = EnabledModels.Where(m => m.ToLowerInvariant().Contains("sonnet")).FirstOrDefault();
-                var hai = EnabledModels.Where(m => m.ToLowerInvariant().Contains("haiku")).FirstOrDefault();
+                var ops = EnabledModels.FirstOrDefault(m => m.Contains("opus", StringComparison.OrdinalIgnoreCase));
+                var son = EnabledModels.FirstOrDefault(m => m.Contains("sonnet", StringComparison.OrdinalIgnoreCase));
+                var hai = EnabledModels.FirstOrDefault(m => m.Contains("haiku", StringComparison.OrdinalIgnoreCase));
                 if (!string.IsNullOrEmpty(ops)) SetEnv("ANTHROPIC_DEFAULT_OPUS_MODEL", ops);
                 if (!string.IsNullOrEmpty(son)) SetEnv("ANTHROPIC_DEFAULT_SONNET_MODEL", son);
                 if (!string.IsNullOrEmpty(hai)) SetEnv("ANTHROPIC_DEFAULT_HAIKU_MODEL", hai);
@@ -384,6 +378,8 @@ public partial class APIConfigViewModel : ObservableObject
         {
             ErrorMessage = ex.Message;
         }
+
+        return Task.CompletedTask;
     }
 
     // ──────────────────────────────────────────────
@@ -750,11 +746,7 @@ public partial class APIConfigViewModel : ObservableObject
         if (string.IsNullOrEmpty(model))
             return;
 
-        if (EnabledModels.Contains(model))
-        {
-            EnabledModels.Remove(model);
-        }
-        else
+        if (!EnabledModels.Remove(model))
         {
             EnabledModels.Add(model);
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -8,6 +9,7 @@ namespace ClaudeCodePanel.Windows.Models;
 public partial class MCPServerConfig : ObservableObject
 {
     public Guid Id { get; } = Guid.NewGuid();
+    public string PersistentKey => BuildPersistentKey(Name, ServerType, Command, Url, Args, Env, ProjectPath);
 
     [ObservableProperty]
     private string _name = "";
@@ -123,6 +125,36 @@ public partial class MCPServerConfig : ObservableObject
         obj is MCPServerConfig other && other.Id == Id;
 
     public override int GetHashCode() => Id.GetHashCode();
+
+    internal static string BuildPersistentKey(
+        string? name,
+        MCPServerType serverType,
+        string? command,
+        string? url,
+        IEnumerable<string>? args,
+        IReadOnlyDictionary<string, string>? env,
+        string? projectPath)
+    {
+        static string Normalize(string? value) => (value ?? "").Trim();
+
+        var normalizedArgs = string.Join("\u001f", (args ?? Array.Empty<string>()).Select(Normalize));
+        var normalizedEnv = string.Join(
+            "\u001f",
+            (env ?? new Dictionary<string, string>())
+                .OrderBy(static kvp => kvp.Key, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static kvp => kvp.Value, StringComparer.Ordinal)
+                .Select(static kvp => $"{kvp.Key.Trim()}={kvp.Value.Trim()}"));
+
+        return string.Join(
+            "\u001e",
+            Normalize(projectPath),
+            serverType.ToString(),
+            Normalize(name),
+            Normalize(command),
+            Normalize(url),
+            normalizedArgs,
+            normalizedEnv);
+    }
 }
 
 public enum MCPServerType

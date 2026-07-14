@@ -1,9 +1,11 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using ClaudeCodePanel.Windows.Models;
+using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 
 namespace ClaudeCodePanel.Windows.Views.MCP;
@@ -18,11 +20,13 @@ namespace ClaudeCodePanel.Windows.Views.MCP;
 public partial class MCPServerListView : UserControl
 {
     private MCPManagerViewModel? _vm;
+    private bool _subscriptionsAttached;
 
     public MCPServerListView()
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -31,17 +35,55 @@ public partial class MCPServerListView : UserControl
         if (_vm == null) return;
 
         DataContext = _vm;
+        AttachSubscriptions();
 
         // Initial load (LoadServers is synchronous)
         _vm.LoadServers();
         RefreshServerCards();
+    }
 
-        // Listen for server list changes
-        _vm.PropertyChanged += (_, args) =>
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        DetachSubscriptions();
+    }
+
+    private void AttachSubscriptions()
+    {
+        if (_vm == null || _subscriptionsAttached)
+            return;
+
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
+        FileWatcherService.Instance.OnChange += OnConfigFileChanged;
+        _subscriptionsAttached = true;
+    }
+
+    private void DetachSubscriptions()
+    {
+        if (_vm == null || !_subscriptionsAttached)
+            return;
+
+        _vm.PropertyChanged -= OnViewModelPropertyChanged;
+        FileWatcherService.Instance.OnChange -= OnConfigFileChanged;
+        _subscriptionsAttached = false;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(MCPManagerViewModel.Servers))
+            Dispatcher.Invoke(RefreshServerCards);
+    }
+
+    private void OnConfigFileChanged(string path)
+    {
+        var configService = ConfigFileService.Instance;
+        if (!path.Equals(configService.ClaudeGlobalConfigPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals(configService.McpPath, StringComparison.OrdinalIgnoreCase))
         {
-            if (args.PropertyName == nameof(MCPManagerViewModel.Servers))
-                Dispatcher.Invoke(RefreshServerCards);
-        };
+            return;
+        }
+
+        _vm?.LoadServers();
+        RefreshServerCards();
     }
 
     // ── Server List Refresh ────────────────────────────────────────────

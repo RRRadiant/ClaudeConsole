@@ -56,6 +56,8 @@ public partial class MCPServerEditorView : UserControl
             ServerCommand.Text = vm.NewCommand;
         if (EnabledToggle != null)
             EnabledToggle.IsChecked = vm.NewEnabled;
+        if (ProjectPathField != null)
+            ProjectPathField.Text = vm.NewProjectPath;
         if (ArgInput != null)
             ArgInput.Text = "";
         SelectServerType(vm.NewServerType);
@@ -116,6 +118,12 @@ public partial class MCPServerEditorView : UserControl
             ArgsSection.Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed;
         if (EnvSection != null)
             EnvSection.Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed;
+        if (ProjectPathField != null)
+        {
+            ProjectPathField.Placeholder = type is MCPServerType.Builtin or MCPServerType.Plugin
+                ? "留空将使用当前目录；建议显式填写项目路径"
+                : "留空表示全局；填写后作为项目级服务器保存";
+        }
     }
 
     // ── Args ────────────────────────────────────────────────────────────
@@ -254,6 +262,7 @@ public partial class MCPServerEditorView : UserControl
         _vm.NewUrl = ServerUrl?.Text ?? "";
         _vm.NewServerType = SelectedServerType();
         _vm.NewEnabled = EnabledToggle?.IsChecked != false;
+        _vm.NewProjectPath = ProjectPathField?.Text ?? "";
         _vm.NewEnv = new List<(string, string)>(_formEnv);
         _onSave?.Invoke(_vm);
     }
@@ -272,6 +281,7 @@ public partial class MCPServerEditorView : UserControl
         if (ServerCommand != null) ServerCommand.Text = "";
         if (ServerUrl != null) ServerUrl.Text = "";
         if (EnabledToggle != null) EnabledToggle.IsChecked = true;
+        if (ProjectPathField != null) ProjectPathField.Text = "";
         if (ArgInput != null) ArgInput.Text = "";
         if (EnvKeyInput != null) EnvKeyInput.Text = "";
         if (EnvValueInput != null) EnvValueInput.Text = "";

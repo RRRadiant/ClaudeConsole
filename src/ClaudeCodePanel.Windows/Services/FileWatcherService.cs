@@ -73,13 +73,14 @@ public sealed class FileWatcherService
     }
 
     /// <summary>Convenience: watch settings.json, settings.local.json,
-    /// and mcp.json from the configured Claude directory.</summary>
+    /// .claude.json, and mcp.json from the configured Claude directory.</summary>
     public void WatchAllConfigFiles()
     {
         var paths = new[]
         {
             ConfigFileService.Instance.SettingsPath,
             ConfigFileService.Instance.SettingsLocalPath,
+            ConfigFileService.Instance.ClaudeGlobalConfigPath,
             ConfigFileService.Instance.McpPath,
         };
         foreach (var path in paths)

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -46,6 +47,7 @@ public partial class ConfigEditorView : UserControl
         _acceptRemoteCommand = new RelayCommand(OnAcceptRemote);
 
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     // ── Loaded ───────────────────────────────────────────────────────────
@@ -70,6 +72,14 @@ public partial class ConfigEditorView : UserControl
             ShowEditor();
         else
             ShowNoSelectionState();
+
+        FileWatcherService.Instance.OnChange -= OnConfigFileChanged;
+        FileWatcherService.Instance.OnChange += OnConfigFileChanged;
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        FileWatcherService.Instance.OnChange -= OnConfigFileChanged;
     }
 
     // ── File tabs ────────────────────────────────────────────────────────
@@ -184,6 +194,38 @@ public partial class ConfigEditorView : UserControl
         UpdateErrorDisplay();
     }
 
+    private void OnConfigFileChanged(string path)
+    {
+        if (_vm == null)
+            return;
+
+        var selectedPath = _vm.SelectedFile?.Path;
+        var selectedWasModified = _vm.IsModified;
+
+        _vm.LoadFileList();
+
+        if (!string.IsNullOrEmpty(selectedPath))
+        {
+            var refreshedFile = _vm.Files.FirstOrDefault(file =>
+                file.Path.Equals(selectedPath, StringComparison.OrdinalIgnoreCase));
+            if (refreshedFile != null)
+            {
+                if (!selectedWasModified &&
+                    path.Equals(selectedPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    _vm.SelectFile(refreshedFile);
+                    ShowEditor();
+                }
+                else
+                {
+                    _vm.SelectedFile = refreshedFile;
+                }
+            }
+        }
+
+        BuildFileTabs();
+    }
+
     // ── Line numbers ─────────────────────────────────────────────────────
 
     /// <summary>
@@ -195,7 +237,7 @@ public partial class ConfigEditorView : UserControl
         LineNumbers.Items.Clear();
         var lineCount = (Editor.Text ?? "").Split('\n').Length;
         for (int i = 1; i <= lineCount; i++)
-            LineNumbers.Items.Add(i.ToString());
+            LineNumbers.Items.Add(i.ToString(CultureInfo.InvariantCulture));
     }
 
     // ── Editor text changed ──────────────────────────────────────────────

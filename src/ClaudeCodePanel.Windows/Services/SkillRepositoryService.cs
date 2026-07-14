@@ -83,6 +83,10 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
     public static SkillRepositoryService Instance { get; } = new();
 
     private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(3600);
+    private static readonly JsonSerializerOptions CacheJsonOptions = new()
+    {
+        WriteIndented = true
+    };
 
     private SkillRepositoryService() { }
 
@@ -377,7 +381,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         }
     }
 
-    private void InstallFromLocalPath(string id, string sourcePath, string targetDir)
+    private static void InstallFromLocalPath(string id, string sourcePath, string targetDir)
     {
         if (!Directory.Exists(sourcePath))
         {
@@ -394,7 +398,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         CopyDirectoryRecursive(sourcePath, targetDir);
     }
 
-    private void InstallFromGitURL(string id, string url, string targetDir)
+    private static void InstallFromGitURL(string id, string url, string targetDir)
     {
         Config.EnsureDirectoryExists(Path.GetDirectoryName(targetDir)!);
 
@@ -468,7 +472,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         }
     }
 
-    private void InstallFromMarketplace(string id, string targetDir)
+    private static void InstallFromMarketplace(string id, string targetDir)
     {
         const string officialRepo = "https://github.com/anthropic/claude-code.git";
         var tempDir = Path.Combine(Path.GetTempPath(), $"claude-code-skill-{Guid.NewGuid()}");
@@ -502,7 +506,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         }
     }
 
-    private async Task InstallFromMarketplaceAsync(string id, string targetDir, string officialRepo, string tempDir)
+    private static async Task InstallFromMarketplaceAsync(string id, string targetDir, string officialRepo, string tempDir)
     {
         var process = new Process
         {
@@ -680,10 +684,7 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
-            var json = JsonSerializer.Serialize(cache, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            var json = JsonSerializer.Serialize(cache, CacheJsonOptions);
 
             File.WriteAllText(path, json);
         }

@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -92,11 +93,18 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         {
             _borderBrush = new SolidColorBrush(BorderRestingColor);
             Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
         }
 
         public override void OnApplyTemplate()
         {
             base.OnApplyTemplate();
+
+            if (_outerBorder != null)
+            {
+                _outerBorder.MouseEnter -= OnMouseEnter;
+                _outerBorder.MouseLeave -= OnMouseLeave;
+            }
 
             _outerBorder = GetTemplateChild("OuterBorder") as Border;
             _strokeBorder = GetTemplateChild("StrokeBorder") as Border;
@@ -124,11 +132,18 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             ApplyThemeShadows();
             AnimateContentEntrance();
 
-            // Listen for theme changes to re-apply dark-mode shadow
-            ThemeService.Instance.PropertyChanged += (_, _) =>
-            {
-                Dispatcher.Invoke(ApplyThemeShadows);
-            };
+            ThemeService.Instance.PropertyChanged -= OnThemeServicePropertyChanged;
+            ThemeService.Instance.PropertyChanged += OnThemeServicePropertyChanged;
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            ThemeService.Instance.PropertyChanged -= OnThemeServicePropertyChanged;
+        }
+
+        private void OnThemeServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            Dispatcher.Invoke(ApplyThemeShadows);
         }
 
         // ── Property Changed Callbacks ────────────────────────────────────
@@ -308,8 +323,10 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             if (cp == null) return;
 
             // Defer until content is actually loaded
-            cp.Loaded += (_, _) =>
+            RoutedEventHandler? onContentLoaded = null;
+            onContentLoaded = (_, _) =>
             {
+                cp.Loaded -= onContentLoaded;
                 if (_entranceAnimated) return;
 
                 var firstTextBlock = FindVisualChild<TextBlock>(cp);
@@ -348,6 +365,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
 
                 sb.Begin();
             };
+            cp.Loaded += onContentLoaded;
         }
 
         // ── Hover Animation (300 ms) ──────────────────────────────────────

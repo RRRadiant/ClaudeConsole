@@ -106,7 +106,7 @@ public partial class ConfigEditorViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var content = _configFileService.ReadFile(file.Path);
+            var content = ConfigFileService.ReadFile(file.Path);
             FileContent = content;
             OriginalContent = content;
             IsModified = false;
@@ -184,7 +184,7 @@ public partial class ConfigEditorViewModel : ObservableObject
             HasConflict = true;
             try
             {
-                ConflictRemoteContent = _configFileService.ReadFile(SelectedFile.Path);
+                ConflictRemoteContent = ConfigFileService.ReadFile(SelectedFile.Path);
             }
             catch
             {

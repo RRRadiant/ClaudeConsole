@@ -254,66 +254,101 @@ public sealed class SyncService : ISyncService
                     }
                 }
 
-                // 3. Also collect enabledMcpjsonServers across all projects
-                var cwd = Directory.GetCurrentDirectory();
-                if (projects.TryGetValue(cwd, out var cwdProjectElement) &&
-                    cwdProjectElement.ValueKind == JsonValueKind.Object)
+                foreach (var (projectPath, projectDataElement) in projects)
                 {
-                    var cwdProjectData = EnumerateJsonObject(cwdProjectElement);
-                    if (cwdProjectData != null)
-                    {
-                        if (cwdProjectData.TryGetValue("enabledMcpjsonServers", out var enabledElement) &&
-                            enabledElement.ValueKind == JsonValueKind.Array)
-                        {
-                            var enabledList = enabledElement.EnumerateArray()
-                                .Select(e => e.GetString())
-                                .Where(s => s != null)
-                                .Select(s => s!);
+                    if (projectDataElement.ValueKind != JsonValueKind.Object)
+                        continue;
 
-                            foreach (var entry in enabledList)
-                            {
-                                if (!servers.Any(s => s.Name == entry))
-                                {
-                                    var srvType = entry.StartsWith("plugin:")
-                                        ? MCPServerType.Plugin
-                                        : MCPServerType.Builtin;
-                                    var server = new MCPServerConfig
-                                    {
-                                        Name = entry,
-                                        ServerType = srvType,
-                                        Command = "",
-                                        Args = new(),
-                                        Env = new(),
-                                        Enabled = true,
-                                        Status = MCPServerStatus.Running,
-                                        ProjectPath = cwd
-                                    };
-                                    servers.Add(server);
-                                }
-                            }
-                        }
+                    var projectData = EnumerateJsonObject(projectDataElement);
+                    if (projectData == null)
+                        continue;
 
-                        if (cwdProjectData.TryGetValue("disabledMcpjsonServers", out var disabledElement) &&
-                            disabledElement.ValueKind == JsonValueKind.Array)
-                        {
-                            var disabledList = disabledElement.EnumerateArray()
-                                .Select(e => e.GetString())
-                                .Where(s => s != null)
-                                .Select(s => s!);
-
-                            foreach (var name in disabledList)
-                            {
-                                var idx = servers.FindIndex(s => s.Name == name);
-                                if (idx >= 0)
-                                    servers[idx].Enabled = false;
-                            }
-                        }
-                    }
+                    MergeProjectScopedServerStates(servers, projectPath, projectData);
                 }
             }
         }
 
         return servers;
+    }
+
+    internal static void MergeProjectScopedServerStates(
+        List<MCPServerConfig> servers,
+        string projectPath,
+        Dictionary<string, JsonElement> projectData)
+    {
+        if (projectData.TryGetValue("enabledMcpjsonServers", out var enabledElement) &&
+            enabledElement.ValueKind == JsonValueKind.Array)
+        {
+            var enabledList = enabledElement.EnumerateArray()
+                .Select(e => e.GetString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s!);
+
+            foreach (var entry in enabledList)
+            {
+                var existing = servers.FirstOrDefault(server =>
+                    server.Name == entry &&
+                    string.Equals(server.ProjectPath, projectPath, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                {
+                    existing.Enabled = true;
+                    continue;
+                }
+
+                var srvType = entry.StartsWith("plugin:", StringComparison.OrdinalIgnoreCase)
+                    ? MCPServerType.Plugin
+                    : MCPServerType.Builtin;
+                servers.Add(new MCPServerConfig
+                {
+                    Name = entry,
+                    ServerType = srvType,
+                    Command = "",
+                    Args = new(),
+                    Env = new(),
+                    Enabled = true,
+                    Status = MCPServerStatus.Running,
+                    ProjectPath = projectPath
+                });
+            }
+        }
+
+        if (projectData.TryGetValue("disabledMcpjsonServers", out var disabledElement) &&
+            disabledElement.ValueKind == JsonValueKind.Array)
+        {
+            var disabledList = disabledElement.EnumerateArray()
+                .Select(e => e.GetString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s!);
+
+            foreach (var name in disabledList)
+            {
+                var existing = servers.FirstOrDefault(server =>
+                    server.Name == name &&
+                    string.Equals(server.ProjectPath, projectPath, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                {
+                    existing.Enabled = false;
+                    continue;
+                }
+
+                var srvType = name.StartsWith("plugin:", StringComparison.OrdinalIgnoreCase)
+                    ? MCPServerType.Plugin
+                    : MCPServerType.Builtin;
+                servers.Add(new MCPServerConfig
+                {
+                    Name = name,
+                    ServerType = srvType,
+                    Command = "",
+                    Args = new(),
+                    Env = new(),
+                    Enabled = false,
+                    Status = MCPServerStatus.Stopped,
+                    ProjectPath = projectPath
+                });
+            }
+        }
     }
 
     /// <summary>

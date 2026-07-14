@@ -14,7 +14,7 @@ namespace ClaudeCodePanel.Windows.Helpers;
 /// </summary>
 public static class MCPDisplayNameStore
 {
-    private static readonly ConcurrentDictionary<Guid, string> _displayNames = new();
+    private static readonly ConcurrentDictionary<string, string> _displayNames = new(StringComparer.Ordinal);
     private static readonly string _storePath;
     private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -33,26 +33,26 @@ public static class MCPDisplayNameStore
     }
 
     /// <summary>
-    /// Returns the stored display name for the given server ID, or null if none is set.
+    /// Returns the stored display name for the given stable server key, or null if none is set.
     /// </summary>
-    public static string? DisplayName(Guid serverId)
+    public static string? DisplayName(string serverKey)
     {
-        return _displayNames.TryGetValue(serverId, out var name) ? name : null;
+        return _displayNames.TryGetValue(serverKey, out var name) ? name : null;
     }
 
     /// <summary>
-    /// Sets or removes a display name for the given server ID.
+    /// Sets or removes a display name for the given stable server key.
     /// Pass null or whitespace to remove the entry.
     /// </summary>
-    public static void SetDisplayName(string? name, Guid serverId)
+    public static void SetDisplayName(string? name, string serverKey)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
-            _displayNames[serverId] = name.Trim();
+            _displayNames[serverKey] = name.Trim();
         }
         else
         {
-            _displayNames.TryRemove(serverId, out _);
+            _displayNames.TryRemove(serverKey, out _);
         }
         SaveToDisk();
     }
@@ -62,7 +62,7 @@ public static class MCPDisplayNameStore
     /// </summary>
     public static string EffectiveName(MCPServerConfig server)
     {
-        return DisplayName(server.Id) ?? server.Name;
+        return DisplayName(server.PersistentKey) ?? server.Name;
     }
 
     private static void LoadFromDisk()
@@ -72,7 +72,7 @@ public static class MCPDisplayNameStore
             if (File.Exists(_storePath))
             {
                 var json = File.ReadAllText(_storePath);
-                var dict = JsonSerializer.Deserialize<Dictionary<Guid, string>>(json);
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 if (dict != null)
                 {
                     foreach (var kvp in dict)
@@ -82,10 +82,9 @@ public static class MCPDisplayNameStore
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // If loading fails, start with an empty dictionary.
-            // The file will be overwritten on the next save.
+            SharedHelpers.SafeLog("MCPDisplayNameStore.LoadFromDisk", ex);
         }
     }
 
@@ -115,13 +114,13 @@ public static class MCPDisplayNameStore
     {
         try
         {
-            var snapshot = new Dictionary<Guid, string>(_displayNames);
+            var snapshot = new Dictionary<string, string>(_displayNames, StringComparer.Ordinal);
             var json = JsonSerializer.Serialize(snapshot, _jsonOptions);
             File.WriteAllText(_storePath, json);
         }
-        catch
+        catch (Exception ex)
         {
-            // Best-effort persistence; silently ignore write failures.
+            SharedHelpers.SafeLog("MCPDisplayNameStore.FlushToDisk", ex);
         }
     }
 }

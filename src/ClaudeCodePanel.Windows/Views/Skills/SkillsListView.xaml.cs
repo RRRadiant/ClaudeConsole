@@ -8,6 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using ClaudeCodePanel.Windows.Models;
+using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 using ClaudeCodePanel.Windows.Views.Shared;
 
@@ -22,11 +23,13 @@ public partial class SkillsListView : UserControl
 {
     private SkillManagerViewModel? _vm;
     private SkillManagerViewModel.SkillTab _currentTab = SkillManagerViewModel.SkillTab.Installed;
+    private bool _subscriptionsAttached;
 
     public SkillsListView()
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -35,6 +38,7 @@ public partial class SkillsListView : UserControl
         if (_vm == null) return;
 
         DataContext = _vm;
+        AttachSubscriptions();
 
         // Bind SearchBar text to ViewModel SearchQuery (two-way)
         var searchBinding = new Binding(nameof(SkillManagerViewModel.SearchQuery))
@@ -58,36 +62,75 @@ public partial class SkillsListView : UserControl
         {
             Debug.WriteLine($"[SkillsListView] LoadMarketplaceSkillsAsync failed: {ex.Message}");
         }
+    }
 
-        // React to VM property changes
-        _vm.PropertyChanged += (_, args) =>
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        DetachSubscriptions();
+    }
+
+    private void AttachSubscriptions()
+    {
+        if (_vm == null || _subscriptionsAttached)
+            return;
+
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
+        FileWatcherService.Instance.OnChange += OnConfigFileChanged;
+        _subscriptionsAttached = true;
+    }
+
+    private void DetachSubscriptions()
+    {
+        if (_vm == null || !_subscriptionsAttached)
+            return;
+
+        _vm.PropertyChanged -= OnViewModelPropertyChanged;
+        FileWatcherService.Instance.OnChange -= OnConfigFileChanged;
+        _subscriptionsAttached = false;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        Dispatcher.Invoke(() =>
         {
-            Dispatcher.Invoke(() =>
+            switch (args.PropertyName)
             {
-                switch (args.PropertyName)
-                {
-                    case nameof(SkillManagerViewModel.InstalledSkills):
-                    case nameof(SkillManagerViewModel.FilteredInstalledSkills):
-                        RefreshInstalledList();
-                        break;
-                    case nameof(SkillManagerViewModel.MarketplaceSkills):
-                    case nameof(SkillManagerViewModel.FilteredMarketplaceSkills):
-                    case nameof(SkillManagerViewModel.IsGithubUrl):
-                        RefreshMarketplaceGrid();
-                        break;
-                    case nameof(SkillManagerViewModel.IsLoadingMarketplace):
-                        LoadingSpinner.Visibility = _vm.IsLoadingMarketplace
-                            ? Visibility.Visible
-                            : Visibility.Collapsed;
-                        break;
-                    case nameof(SkillManagerViewModel.SearchQuery):
-                        // Trigger server-side search when on marketplace tab
-                        if (_currentTab == SkillManagerViewModel.SkillTab.Marketplace)
-                            _ = _vm.LoadMarketplaceSkillsAsync();
-                        break;
-                }
-            });
-        };
+                case nameof(SkillManagerViewModel.InstalledSkills):
+                case nameof(SkillManagerViewModel.FilteredInstalledSkills):
+                    RefreshInstalledList();
+                    break;
+                case nameof(SkillManagerViewModel.MarketplaceSkills):
+                case nameof(SkillManagerViewModel.FilteredMarketplaceSkills):
+                case nameof(SkillManagerViewModel.IsGithubUrl):
+                    RefreshMarketplaceGrid();
+                    break;
+                case nameof(SkillManagerViewModel.IsLoadingMarketplace):
+                    LoadingSpinner.Visibility = _vm?.IsLoadingMarketplace == true
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+                    break;
+                case nameof(SkillManagerViewModel.SearchQuery):
+                    if (_currentTab == SkillManagerViewModel.SkillTab.Marketplace && _vm != null)
+                        _ = _vm.LoadMarketplaceSkillsAsync();
+                    break;
+            }
+        });
+    }
+
+    private void OnConfigFileChanged(string path)
+    {
+        if (_vm == null)
+            return;
+
+        var configService = ConfigFileService.Instance;
+        if (!path.Equals(configService.SettingsPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals(configService.SettingsLocalPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _vm.LoadInstalledSkills();
+        RefreshInstalledList();
     }
 
     // ── Tab switching ──────────────────────────────────────────────────

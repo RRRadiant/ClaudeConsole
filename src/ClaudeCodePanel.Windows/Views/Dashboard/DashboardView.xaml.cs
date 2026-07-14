@@ -1,13 +1,17 @@
 using System;
+using System.ComponentModel;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using ClaudeCodePanel.Windows.Models;
+using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,7 +20,7 @@ namespace ClaudeCodePanel.Windows.Views.Dashboard;
 public partial class DashboardView : UserControl
 {
     private DashboardViewModel? _vm;
-    private bool _isLoaded;
+    private bool _subscriptionsAttached;
     private bool _hasAnimatedEvents;
 
     // Progress bar animation targets (percentage 0-100)
@@ -26,41 +30,97 @@ public partial class DashboardView : UserControl
     {
         InitializeComponent();
         Loaded += OnLoadedAsync;
+        Unloaded += OnUnloaded;
     }
 
     private async void OnLoadedAsync(object sender, RoutedEventArgs e)
     {
-        if (_isLoaded) return;
-        _isLoaded = true;
-
         _vm = App.Services.GetService(typeof(DashboardViewModel)) as DashboardViewModel;
         if (_vm == null) return;
 
         DataContext = _vm;
+        AttachSubscriptions();
+
+        await ReloadSummaryAsync();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        DetachSubscriptions();
+    }
+
+    private void AttachSubscriptions()
+    {
+        if (_vm == null || _subscriptionsAttached)
+            return;
+
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
+        _vm.Summary.PropertyChanged += OnSummaryPropertyChanged;
+        FileWatcherService.Instance.OnChange += OnConfigFileChanged;
+        _subscriptionsAttached = true;
+    }
+
+    private void DetachSubscriptions()
+    {
+        if (_vm == null || !_subscriptionsAttached)
+            return;
+
+        _vm.PropertyChanged -= OnViewModelPropertyChanged;
+        _vm.Summary.PropertyChanged -= OnSummaryPropertyChanged;
+        FileWatcherService.Instance.OnChange -= OnConfigFileChanged;
+        _subscriptionsAttached = false;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(DashboardViewModel.Summary) || _vm == null)
+            return;
+
+        _vm.Summary.PropertyChanged -= OnSummaryPropertyChanged;
+        _vm.Summary.PropertyChanged += OnSummaryPropertyChanged;
+        RefreshSummaryUi();
+    }
+
+    private void OnSummaryPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        Dispatcher.Invoke(RefreshSummaryUi);
+    }
+
+    private void OnConfigFileChanged(string path)
+    {
+        var configService = ConfigFileService.Instance;
+        if (!path.Equals(configService.SettingsPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals(configService.SettingsLocalPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals(configService.ClaudeGlobalConfigPath, StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals(configService.McpPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _ = ReloadSummaryAsync();
+    }
+
+    private async Task ReloadSummaryAsync()
+    {
+        if (_vm == null)
+            return;
 
         try
         {
+            _hasAnimatedEvents = false;
             await _vm.LoadSummaryAsync();
+            RefreshSummaryUi();
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[DashboardView] LoadSummaryAsync failed: {ex.Message}");
         }
+    }
 
+    private void RefreshSummaryUi()
+    {
         ApplyCardData();
         AnimateProgressBars();
-
-        // React to future summary changes
-        _vm.PropertyChanged += (_, args) =>
-        {
-            Dispatcher.Invoke(() =>
-            {
-                ApplyCardData();
-                AnimateProgressBars();
-                RefreshEventsList();
-            });
-        };
-
         RefreshEventsList();
     }
 
@@ -94,7 +154,7 @@ public partial class DashboardView : UserControl
             ? (Brush)FindResource("StatusSuccessBrush")
             : (Brush)FindResource("TextTertiaryBrush");
 
-        SkillsValueText.Text = s.InstalledSkillsCount.ToString();
+        SkillsValueText.Text = s.InstalledSkillsCount.ToString(CultureInfo.InvariantCulture);
 
         // ── Card 4: MCP ──
         McpStatusDot.Fill = s.ActiveMCPServersCount > 0
