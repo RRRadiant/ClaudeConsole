@@ -9,8 +9,8 @@ namespace ClaudeCodePanel.Windows.Helpers;
 
 /// <summary>
 /// Attached behavior that adds page-transition animations to a ContentControl.
-/// When content changes, the old view fades out + slides up (200 ms cubic-bezier),
-/// and the new view fades in + slides down (300 ms ease-out).
+/// When content changes, the old view drifts left while fading, then the new
+/// view glides in from the right with a slightly longer ease-out.
 /// The first content assignment is never animated.
 /// </summary>
 public static class ContentTransitionBehavior
@@ -53,9 +53,9 @@ public static class ContentTransitionBehavior
 
     /// <summary>
     /// Animates the ContentControl to the new content:
-    /// 1. Exit: old content fades out (opacity 1→0) + slides up (Y 0→-8) in 200 ms.
+    /// 1. Exit: old content fades out (opacity 1→0) + drifts left (X 0→-18) in 180 ms.
     /// 2. Swap: content is replaced.
-    /// 3. Entrance: new content fades in (opacity 0→1) + slides down (Y 8→0) in 300 ms.
+    /// 3. Entrance: new content fades in (opacity 0→1) + glides in (X 24→0) in 280 ms.
     ///
     /// The very first call is a no-op (no animation for initial load).
     /// </summary>
@@ -90,7 +90,7 @@ public static class ContentTransitionBehavior
         await AnimateEntranceAsync(cc);
     }
 
-    // ── Exit animation (200 ms, cubic-bezier → CubicEase EaseInOut) ─
+    // ── Exit animation (180 ms, gentle ease-in) ─
 
     private static Task AnimateExitAsync(FrameworkElement element)
     {
@@ -102,23 +102,23 @@ public static class ContentTransitionBehavior
         var sb = new Storyboard();
 
         // Fade out
-        var fadeOut = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(200))
+        var fadeOut = new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(180))
         {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
         };
         Storyboard.SetTarget(fadeOut, element);
         Storyboard.SetTargetProperty(fadeOut, new PropertyPath(UIElement.OpacityProperty));
         sb.Children.Add(fadeOut);
 
-        // Slide up (Y 0 → -8)
-        var slideUp = new DoubleAnimation(0, -8, TimeSpan.FromMilliseconds(200))
+        // Drift left (X 0 → -18)
+        var slideLeft = new DoubleAnimation(0, -18, TimeSpan.FromMilliseconds(180))
         {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
         };
-        Storyboard.SetTarget(slideUp, element);
-        Storyboard.SetTargetProperty(slideUp,
-            new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
-        sb.Children.Add(slideUp);
+        Storyboard.SetTarget(slideLeft, element);
+        Storyboard.SetTargetProperty(slideLeft,
+            new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.X)"));
+        sb.Children.Add(slideLeft);
 
         sb.Completed += (_, _) =>
         {
@@ -130,20 +130,20 @@ public static class ContentTransitionBehavior
         return tcs.Task;
     }
 
-    // ── Entrance animation (300 ms, ease-out) ──────────────────────
+    // ── Entrance animation (280 ms, ease-out) ──────────────────────
 
     private static Task AnimateEntranceAsync(FrameworkElement element)
     {
         var tcs = new TaskCompletionSource<bool>();
 
         // Start state: invisible, shifted down
-        element.RenderTransform = new TranslateTransform(0, 8);
+        element.RenderTransform = new TranslateTransform(24, 0);
         element.Opacity = 0;
 
         var sb = new Storyboard();
 
         // Fade in
-        var fadeIn = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(300))
+        var fadeIn = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(280))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
@@ -151,15 +151,15 @@ public static class ContentTransitionBehavior
         Storyboard.SetTargetProperty(fadeIn, new PropertyPath(UIElement.OpacityProperty));
         sb.Children.Add(fadeIn);
 
-        // Slide down (Y 8 → 0)
-        var slideDown = new DoubleAnimation(8, 0, TimeSpan.FromMilliseconds(300))
+        // Glide in (X 24 → 0)
+        var slideIn = new DoubleAnimation(24, 0, TimeSpan.FromMilliseconds(280))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
-        Storyboard.SetTarget(slideDown, element);
-        Storyboard.SetTargetProperty(slideDown,
-            new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
-        sb.Children.Add(slideDown);
+        Storyboard.SetTarget(slideIn, element);
+        Storyboard.SetTargetProperty(slideIn,
+            new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.X)"));
+        sb.Children.Add(slideIn);
 
         sb.Completed += (_, _) =>
         {

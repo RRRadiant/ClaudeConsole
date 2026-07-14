@@ -81,7 +81,9 @@ public sealed class MCPService : IMCPService
         bool isPython = config.Command.EndsWith(".py", StringComparison.OrdinalIgnoreCase)
                         || config.Args.Any(a => a.EndsWith(".py", StringComparison.OrdinalIgnoreCase));
 
-        if (!isPython)
+        if (config.Args.Count > 0)
+            testArgs.AddRange(config.Args);
+        else if (!isPython)
             testArgs.Add("--help");
 
         string shell = Environment.OSVersion.Platform == PlatformID.Win32NT

@@ -5,6 +5,7 @@
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <AssemblyName>ClaudeConsole</AssemblyName>
     <RootNamespace>ClaudeCodePanel.Windows</RootNamespace>

@@ -117,4 +117,31 @@ public class SyncServiceApplyEnvTests
         Assert.Equal(APIProvider.Anthropic, result.Provider); // overridden
         Assert.Equal("existing-key", result.ApiKey);          // preserved
     }
+
+    [Fact]
+    public void ExtractEnabledSkillIds_MergesSettingsAndLocal_WithLocalOverride()
+    {
+        var settings = new Dictionary<string, System.Text.Json.JsonElement>
+        {
+            ["enabledPlugins"] = System.Text.Json.JsonSerializer.SerializeToElement(new Dictionary<string, bool>
+            {
+                ["review@marketplace"] = true,
+                ["test@marketplace"] = true
+            })
+        };
+        var local = new Dictionary<string, System.Text.Json.JsonElement>
+        {
+            ["enabledPlugins"] = System.Text.Json.JsonSerializer.SerializeToElement(new Dictionary<string, bool>
+            {
+                ["test@marketplace"] = false,
+                ["qa@marketplace"] = true
+            })
+        };
+
+        var result = SyncService.ExtractEnabledSkillIds(settings, local);
+
+        Assert.Contains("review", result);
+        Assert.Contains("qa", result);
+        Assert.DoesNotContain("test", result);
+    }
 }

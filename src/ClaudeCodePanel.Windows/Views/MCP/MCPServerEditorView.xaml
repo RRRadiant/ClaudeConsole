@@ -5,68 +5,100 @@
 
     <shared:GlassCard x:Name="EditorCard" Title="添加 MCP 服务器" Margin="0,0,0,24">
         <StackPanel>
+            <!-- Type -->
+            <TextBlock Text="类型" FontSize="15" Margin="0,0,0,6"
+                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <ComboBox x:Name="ServerTypeCombo"
+                      SelectionChanged="OnServerTypeChanged"
+                      Margin="0,0,0,16"
+                      Padding="10,6">
+                <ComboBoxItem Tag="Stdio">STDIO</ComboBoxItem>
+                <ComboBoxItem Tag="Sse">SSE</ComboBoxItem>
+                <ComboBoxItem Tag="Builtin">内置</ComboBoxItem>
+                <ComboBoxItem Tag="Plugin">插件</ComboBoxItem>
+            </ComboBox>
+
             <!-- Name -->
             <TextBlock Text="名称" FontSize="15" Margin="0,0,0,6"
                        Foreground="{DynamicResource TextSecondaryBrush}"/>
             <shared:GlassTextField x:Name="ServerName" Variant="Regular"
                                    Placeholder="服务器名称" Margin="0,0,0,16"/>
 
-            <!-- Command -->
-            <TextBlock Text="命令" FontSize="15" Margin="0,0,0,6"
-                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <shared:GlassTextField x:Name="ServerCommand" Variant="Regular"
-                                   Placeholder="npx @anthropic/mcp-server" Margin="0,0,0,16"/>
+            <CheckBox x:Name="EnabledToggle"
+                      Content="已启用"
+                      IsChecked="True"
+                      Margin="0,0,0,16"/>
+
+            <!-- URL -->
+            <StackPanel x:Name="UrlSection" Visibility="Collapsed">
+                <TextBlock Text="URL" FontSize="15" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <shared:GlassTextField x:Name="ServerUrl" Variant="Regular"
+                                       Placeholder="https://example.com/sse" Margin="0,0,0,16"/>
+            </StackPanel>
+
+            <StackPanel x:Name="CommandSection">
+                <!-- Command -->
+                <TextBlock Text="命令" FontSize="15" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <shared:GlassTextField x:Name="ServerCommand" Variant="Regular"
+                                       Placeholder="npx @anthropic/mcp-server" Margin="0,0,0,16"/>
+            </StackPanel>
 
             <!-- Args -->
-            <TextBlock Text="参数" FontSize="15" Margin="0,0,0,6"
-                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <Grid Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <shared:GlassTextField x:Name="ArgInput" Variant="Compact" Placeholder="添加参数"/>
-                <Button x:Name="AddArgBtn" Grid.Column="1" Click="OnAddArgClicked" Margin="8,0,0,0"
-                        Cursor="Hand" Background="Transparent"
-                        BorderBrush="{DynamicResource AccentBrush}"
-                        BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
-                        Padding="14,7">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="16"/>
-                        </Style>
-                    </Button.Resources>
-                    <TextBlock Text="添加" FontSize="14"/>
-                </Button>
-            </Grid>
-            <StackPanel x:Name="ArgsPanel" Margin="0,0,0,16"/>
+            <StackPanel x:Name="ArgsSection">
+                <TextBlock Text="参数" FontSize="15" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <shared:GlassTextField x:Name="ArgInput" Variant="Compact" Placeholder="添加参数"/>
+                    <Button x:Name="AddArgBtn" Grid.Column="1" Click="OnAddArgClicked" Margin="8,0,0,0"
+                            Cursor="Hand" Background="Transparent"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
+                            Padding="14,7">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="16"/>
+                            </Style>
+                        </Button.Resources>
+                        <TextBlock Text="添加" FontSize="14"/>
+                    </Button>
+                </Grid>
+                <StackPanel x:Name="ArgsPanel" Margin="0,0,0,16"/>
+            </StackPanel>
 
             <!-- Env Vars -->
-            <TextBlock Text="环境变量" FontSize="15" Margin="0,0,0,6"
-                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <Grid Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <shared:GlassTextField x:Name="EnvKeyInput" Variant="Compact" Placeholder="键"/>
-                <shared:GlassTextField x:Name="EnvValueInput" Grid.Column="1" Variant="Compact"
-                                       Placeholder="值" Margin="8,0"/>
-                <Button x:Name="AddEnvBtn" Grid.Column="2" Click="OnAddEnvClicked" Margin="8,0,0,0"
-                        Cursor="Hand" Background="Transparent"
-                        BorderBrush="{DynamicResource AccentBrush}"
-                        BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
-                        Padding="14,7">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="16"/>
-                        </Style>
-                    </Button.Resources>
-                    <TextBlock Text="添加" FontSize="14"/>
-                </Button>
-            </Grid>
-            <StackPanel x:Name="EnvPanel" Margin="0,0,0,16"/>
+            <StackPanel x:Name="EnvSection">
+                <TextBlock Text="环境变量" FontSize="15" Margin="0,0,0,6"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <shared:GlassTextField x:Name="EnvKeyInput" Variant="Compact" Placeholder="键"/>
+                    <shared:GlassTextField x:Name="EnvValueInput" Grid.Column="1" Variant="Compact"
+                                           Placeholder="值" Margin="8,0"/>
+                    <Button x:Name="AddEnvBtn" Grid.Column="2" Click="OnAddEnvClicked" Margin="8,0,0,0"
+                            Cursor="Hand" Background="Transparent"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
+                            Padding="14,7">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="16"/>
+                            </Style>
+                        </Button.Resources>
+                        <TextBlock Text="添加" FontSize="14"/>
+                    </Button>
+                </Grid>
+                <StackPanel x:Name="EnvPanel" Margin="0,0,0,16"/>
+            </StackPanel>
 
             <!-- Actions -->
             <StackPanel Orientation="Horizontal">

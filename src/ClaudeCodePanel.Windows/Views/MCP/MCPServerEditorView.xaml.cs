@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ClaudeCodePanel.Windows.Models;
 using ClaudeCodePanel.Windows.ViewModels;
 
 namespace ClaudeCodePanel.Windows.Views.MCP;
@@ -49,16 +50,72 @@ public partial class MCPServerEditorView : UserControl
         // Populate fields from ViewModel
         if (ServerName != null)
             ServerName.Text = vm.NewName;
+        if (ServerUrl != null)
+            ServerUrl.Text = vm.NewUrl;
         if (ServerCommand != null)
             ServerCommand.Text = vm.NewCommand;
+        if (EnabledToggle != null)
+            EnabledToggle.IsChecked = vm.NewEnabled;
         if (ArgInput != null)
             ArgInput.Text = "";
+        SelectServerType(vm.NewServerType);
 
         _formEnv.Clear();
         _formEnv.AddRange(vm.NewEnv);
 
         RefreshArgList();
         RefreshEnvList();
+        RefreshFieldVisibility();
+    }
+
+    private void SelectServerType(MCPServerType serverType)
+    {
+        if (ServerTypeCombo == null)
+            return;
+
+        foreach (var item in ServerTypeCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), serverType.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                ServerTypeCombo.SelectedItem = item;
+                return;
+            }
+        }
+
+        ServerTypeCombo.SelectedIndex = 0;
+    }
+
+    private MCPServerType SelectedServerType()
+    {
+        var tag = (ServerTypeCombo?.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+        return tag switch
+        {
+            "Sse" => MCPServerType.Sse,
+            "Builtin" => MCPServerType.Builtin,
+            "Plugin" => MCPServerType.Plugin,
+            _ => MCPServerType.Stdio
+        };
+    }
+
+    private void OnServerTypeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        RefreshFieldVisibility();
+    }
+
+    private void RefreshFieldVisibility()
+    {
+        var type = SelectedServerType();
+        var isSse = type == MCPServerType.Sse;
+        var isStdio = type == MCPServerType.Stdio;
+
+        if (UrlSection != null)
+            UrlSection.Visibility = isSse ? Visibility.Visible : Visibility.Collapsed;
+        if (CommandSection != null)
+            CommandSection.Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed;
+        if (ArgsSection != null)
+            ArgsSection.Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed;
+        if (EnvSection != null)
+            EnvSection.Visibility = isStdio ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // ── Args ────────────────────────────────────────────────────────────
@@ -194,6 +251,9 @@ public partial class MCPServerEditorView : UserControl
         if (_vm == null) return;
         _vm.NewName = ServerName?.Text ?? "";
         _vm.NewCommand = ServerCommand?.Text ?? "";
+        _vm.NewUrl = ServerUrl?.Text ?? "";
+        _vm.NewServerType = SelectedServerType();
+        _vm.NewEnabled = EnabledToggle?.IsChecked != false;
         _vm.NewEnv = new List<(string, string)>(_formEnv);
         _onSave?.Invoke(_vm);
     }
@@ -210,11 +270,15 @@ public partial class MCPServerEditorView : UserControl
     {
         if (ServerName != null) ServerName.Text = "";
         if (ServerCommand != null) ServerCommand.Text = "";
+        if (ServerUrl != null) ServerUrl.Text = "";
+        if (EnabledToggle != null) EnabledToggle.IsChecked = true;
         if (ArgInput != null) ArgInput.Text = "";
         if (EnvKeyInput != null) EnvKeyInput.Text = "";
         if (EnvValueInput != null) EnvValueInput.Text = "";
+        SelectServerType(MCPServerType.Stdio);
         _formEnv.Clear();
         RefreshArgList();
         RefreshEnvList();
+        RefreshFieldVisibility();
     }
 }

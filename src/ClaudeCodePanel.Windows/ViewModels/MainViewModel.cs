@@ -171,8 +171,14 @@ public partial class MainViewModel : ObservableObject
         UpdateStatusText = "检查中…";
         IsUpdateAvailable = false;
 
-        var update = await _updateService.CheckForUpdateAsync();
-        if (update is not { IsNewer: true })
+        var result = await _updateService.CheckForUpdateAsync();
+        if (result.Status == UpdateCheckStatus.Failed)
+        {
+            UpdateStatusText = "检查失败";
+            return;
+        }
+
+        if (result.Status != UpdateCheckStatus.UpdateAvailable || result.Update is not { IsNewer: true } update)
         {
             UpdateStatusText = "已是最新";
             return;

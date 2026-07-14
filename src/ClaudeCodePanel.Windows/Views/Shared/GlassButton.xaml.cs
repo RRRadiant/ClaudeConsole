@@ -115,7 +115,8 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         // Accent: rgba(100,180,255,0.08) bg
         private static Color AccentBgColor => ThemeColor("AccentSubtleBrush",
             Color.FromArgb(0x14, 0x64, 0xb4, 0xff));
-        private static Color AccentHoverBgColor => Color.FromArgb(0x1E, 0x64, 0xb4, 0xff);
+        private static Color AccentHoverBgColor => ThemeColor("AccentGlowBrush",
+            Color.FromArgb(0x1E, 0x64, 0xb4, 0xff));
         // Danger: rgba(207,107,107,0.04) bg
         private static Color DangerBgColor => Color.FromArgb(0x0A, 0xcf, 0x6b, 0x6b);
         private static Color DangerHoverBgColor => Color.FromArgb(0x1A, 0xcf, 0x6b, 0x6b);
@@ -127,7 +128,8 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF));
         private static Color BorderAccentColor => ThemeColor("BorderAccentBrush",
             Color.FromArgb(0x33, 0x64, 0xb4, 0xff));
-        private static Color BorderAccentHoverColor => Color.FromArgb(0x4D, 0x64, 0xb4, 0xff);
+        private static Color BorderAccentHoverColor => ThemeColor("AccentHoverBrush",
+            Color.FromArgb(0x4D, 0x64, 0xb4, 0xff));
         private static Color BorderDangerColor => Color.FromArgb(0x40, 0xcf, 0x6b, 0x6b);
         private static Color BorderDangerHoverColor => Color.FromArgb(0x73, 0xcf, 0x6b, 0x6b);
 

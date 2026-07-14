@@ -264,7 +264,8 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                     BlurRadius = 12,
                     Opacity = 0.35,
                     ShadowDepth = 0,
-                    Color = Color.FromRgb(0x6f, 0xaa, 0xdd) // AccentBrush color
+                    Color = (Application.Current?.TryFindResource("AccentBrush") as SolidColorBrush)?.Color
+                        ?? Color.FromRgb(0x6f, 0xaa, 0xdd)
                 };
             }
 

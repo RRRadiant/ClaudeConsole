@@ -1,5 +1,12 @@
 namespace ClaudeCodePanel.Windows.Models;
 
+public enum UpdateCheckStatus
+{
+    UpToDate,
+    UpdateAvailable,
+    Failed
+}
+
 /// <summary>
 /// Represents a software update discovered via GitHub Releases.
 /// </summary>
@@ -19,4 +26,11 @@ public sealed class UpdateInfo
 
     /// <summary>Download URL for the portable .exe asset, if any.</summary>
     public string? DownloadUrl { get; init; }
+}
+
+public sealed class UpdateCheckResult
+{
+    public UpdateCheckStatus Status { get; init; }
+    public UpdateInfo? Update { get; init; }
+    public string? ErrorMessage { get; init; }
 }

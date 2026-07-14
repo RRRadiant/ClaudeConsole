@@ -228,8 +228,8 @@ public partial class APIConfigView : UserControl
 
     /// <summary>
     /// Updates the key status indicator and copy button visibility.
-    /// Shows "已加密存储于 Credential Manager" when a key is saved,
-    /// or "输入后自动加密存储" otherwise.
+    /// Shows "已保存到 Credential Manager，并同步到 Claude Code 配置" when a key is saved,
+    /// or "输入后会保存并同步到 Claude Code 配置" otherwise.
     /// </summary>
     private void UpdateKeyStatus()
     {
@@ -237,12 +237,12 @@ public partial class APIConfigView : UserControl
 
         if (_vm.IsKeySaved)
         {
-            KeyStatus.Label = "已加密存储于 Credential Manager";
+            KeyStatus.Label = "已保存到 Credential Manager，并同步到 Claude Code 配置";
             KeyStatus.Status = "Running";
         }
         else
         {
-            KeyStatus.Label = "输入后自动加密存储";
+            KeyStatus.Label = "输入后会保存并同步到 Claude Code 配置";
             KeyStatus.Status = "Stopped";
         }
 

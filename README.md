@@ -9,7 +9,7 @@ A Windows desktop app for managing [Claude Code](https://claude.ai/code) configu
 | Panel | Description |
 |-------|-------------|
 | **Dashboard** | Claude Code status, API connection, model count, MCP servers, skills overview |
-| **API Config** | Manage API keys (stored in Windows Credential Manager), support for Anthropic / OpenAI / DeepSeek / Custom, connection testing, model detection |
+| **API Config** | Manage API keys (saved to Windows Credential Manager and mirrored into Claude Code config), support for Anthropic / OpenAI / DeepSeek / Custom, connection testing, model detection |
 | **Config Editor** | Browse and edit `~/.claude/` JSON config files with mtime conflict detection |
 | **MCP Servers** | Add, edit, delete MCP servers with connection testing and local display-name aliases |
 | **Skills** | Browse GitHub Marketplace, install / uninstall skills, toggle enabled state |
@@ -28,12 +28,12 @@ A Windows desktop app for managing [Claude Code](https://claude.ai/code) configu
 
 ## 📦 Download
 
-Go to [Releases](https://github.com/Lyxxxx718/ClaudeConsole/releases) and download the latest `ClaudeConsole.exe`. Double-click to run — no .NET runtime installation required.
+Go to [Releases](https://github.com/RRRadiant/ClaudeConsole/releases) and download the latest `ClaudeConsole.exe`. Double-click to run — no .NET runtime installation required.
 
 ## 🔧 Build from Source
 
 ```powershell
-git clone https://github.com/Lyxxxx718/ClaudeConsole.git
+git clone https://github.com/RRRadiant/ClaudeConsole.git
 cd ClaudeConsole\ClaudeCodePanel.Windows
 dotnet restore
 dotnet build -c Release

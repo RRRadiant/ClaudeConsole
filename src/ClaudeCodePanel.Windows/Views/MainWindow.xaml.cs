@@ -20,6 +20,8 @@ namespace ClaudeCodePanel.Windows.Views
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const double TitleBarCaptureHeight = 52;
+
         // ── P/Invoke for edge resize with WindowStyle=None ──────────────────
 
         private const int WM_NCHITTEST = 0x0084;
@@ -104,7 +106,7 @@ namespace ClaudeCodePanel.Windows.Views
         {
             // Mica and dark title bar — must happen before Show()
             Windows11Interop.EnableMica(this);
-            Windows11Interop.ApplyDarkTitleBar(this);
+            Windows11Interop.ApplyTitleBarTheme(this, ThemeService.Instance.IsDarkTheme);
 
             // Edge-resize WndProc hook
             var handle = new WindowInteropHelper(this).Handle;
@@ -130,19 +132,21 @@ namespace ClaudeCodePanel.Windows.Views
             SizeChanged += (_, _) => UpdateTitleBarBlur();
             ThemeService.Instance.PropertyChanged += async (_, e) =>
             {
-                if (e.PropertyName == nameof(ThemeService.IsDarkTheme))
-                {
-                    Dispatcher.Invoke(UpdateTitleBarBlur);
+                if (e.PropertyName != nameof(ThemeService.AppearanceRevision))
+                    return;
 
-                    // Force WPF to destroy and recreate the current View so all
-                    // DynamicResource are re-resolved against the new theme dictionary.
-                    // TransitionToAsync short-circuits when the ViewModel is unchanged,
-                    // so we bypass it: null → reassign triggers DataTemplate re-instantiation.
-                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
-                    var current = _mainViewModel.SelectedPanelViewModel;
-                    ContentArea.Content = null;
-                    ContentArea.Content = current;
-                }
+                Dispatcher.Invoke(() =>
+                {
+                    Windows11Interop.ApplyTitleBarTheme(this, ThemeService.Instance.IsDarkTheme);
+                    UpdateTitleBarBlur();
+                });
+
+                // Force WPF to destroy and recreate the current View so all
+                // DynamicResource are re-resolved against the latest appearance state.
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
+                var current = _mainViewModel.SelectedPanelViewModel;
+                ContentArea.Content = null;
+                ContentArea.Content = current;
             };
         }
 
@@ -167,7 +171,7 @@ namespace ClaudeCodePanel.Windows.Views
 
             try
             {
-                double titleBarHeight = 36;
+                double titleBarHeight = TitleBarCaptureHeight;
                 double dpiScale = VisualTreeHelper.GetDpi(this).DpiScaleX;
 
                 int width = (int)(ActualWidth * dpiScale);
@@ -418,7 +422,7 @@ namespace ClaudeCodePanel.Windows.Views
                 MaximizeRestoreButton.ToolTip = "Maximize";
 
                 // Restore rounded corners and shadow
-                WindowChromeBorder.CornerRadius = new CornerRadius(12);
+                WindowChromeBorder.CornerRadius = new CornerRadius(26);
                 WindowShadow.Visibility = Visibility.Visible;
             }
         }

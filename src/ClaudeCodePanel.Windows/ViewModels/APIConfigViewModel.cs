@@ -350,6 +350,9 @@ public partial class APIConfigViewModel : ObservableObject
             SetEnv("ANTHROPIC_BASE_URL", BaseURL);
             SetEnv("ANTHROPIC_AUTH_TOKEN", ApiKey);
             SetEnv("ANTHROPIC_MODEL", EnabledModels.FirstOrDefault() ?? "");
+            SetEnv("ANTHROPIC_DEFAULT_OPUS_MODEL", "");
+            SetEnv("ANTHROPIC_DEFAULT_SONNET_MODEL", "");
+            SetEnv("ANTHROPIC_DEFAULT_HAIKU_MODEL", "");
             if (EnabledModels.Count > 1)
             {
                 var ops = EnabledModels.Where(m => m.ToLowerInvariant().Contains("opus")).FirstOrDefault();

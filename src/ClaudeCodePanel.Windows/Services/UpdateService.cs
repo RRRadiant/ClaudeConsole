@@ -37,9 +37,10 @@ public sealed class UpdateService : IUpdateService
 
     /// <summary>
     /// Checks GitHub Releases for a newer version.
-    /// Returns null if already up-to-date, offline, or on error.
+    /// Returns a typed result so callers can distinguish up-to-date,
+    /// update available, and failed checks.
     /// </summary>
-    public async Task<UpdateInfo?> CheckForUpdateAsync()
+    public async Task<UpdateCheckResult> CheckForUpdateAsync()
     {
         try
         {
@@ -52,7 +53,13 @@ public sealed class UpdateService : IUpdateService
                 .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
-                return null;
+            {
+                return new UpdateCheckResult
+                {
+                    Status = UpdateCheckStatus.Failed,
+                    ErrorMessage = $"HTTP {(int)response.StatusCode}"
+                };
+            }
 
             var json = await response.Content
                 .ReadAsStringAsync()
@@ -67,7 +74,12 @@ public sealed class UpdateService : IUpdateService
 
             var remoteVersion = ParseVersion(tagName);
             if (remoteVersion == null || remoteVersion <= CurrentVersion)
-                return null;
+            {
+                return new UpdateCheckResult
+                {
+                    Status = UpdateCheckStatus.UpToDate
+                };
+            }
 
             string? downloadUrl = null;
             if (root.TryGetProperty("assets", out var assets) &&
@@ -80,19 +92,27 @@ public sealed class UpdateService : IUpdateService
                         url.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
             }
 
-            return new UpdateInfo
+            return new UpdateCheckResult
             {
-                Version = tagName,
-                ReleaseUrl = htmlUrl,
-                ReleaseNotes = body,
-                IsNewer = true,
-                DownloadUrl = downloadUrl
+                Status = UpdateCheckStatus.UpdateAvailable,
+                Update = new UpdateInfo
+                {
+                    Version = tagName,
+                    ReleaseUrl = htmlUrl,
+                    ReleaseNotes = body,
+                    IsNewer = true,
+                    DownloadUrl = downloadUrl
+                }
             };
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[UpdateService] CheckForUpdateAsync failed: {ex.Message}");
-            return null;
+            return new UpdateCheckResult
+            {
+                Status = UpdateCheckStatus.Failed,
+                ErrorMessage = ex.Message
+            };
         }
     }
 

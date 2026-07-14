@@ -30,6 +30,15 @@
   <data name="Theme.DarkHint" xml:space="preserve"><value>点击切换浅色</value></data>
   <data name="Theme.Light" xml:space="preserve"><value>浅色模式</value></data>
   <data name="Theme.LightHint" xml:space="preserve"><value>点击切换深色</value></data>
+  <data name="Theme.Appearance" xml:space="preserve"><value>外观</value></data>
+  <data name="Theme.ModeSystem" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="Theme.ModeLight" xml:space="preserve"><value>白色</value></data>
+  <data name="Theme.ModeDark" xml:space="preserve"><value>黑色</value></data>
+  <data name="Theme.ModeCustom" xml:space="preserve"><value>自定义</value></data>
+  <data name="Theme.Accent" xml:space="preserve"><value>强调色</value></data>
+  <data name="Theme.AccentAction" xml:space="preserve"><value>选择颜色</value></data>
+  <data name="Theme.AccentHint" xml:space="preserve"><value>选择后会切换到自定义配色</value></data>
+  <data name="Theme.AccentActiveHint" xml:space="preserve"><value>当前正在使用自定义强调色</value></data>
 
   <!-- Update -->
   <data name="Update.Checking" xml:space="preserve"><value>检查中…</value></data>
@@ -52,4 +61,6 @@
   <!-- Language -->
   <data name="Language.Chinese" xml:space="preserve"><value>中文</value></data>
   <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.Label" xml:space="preserve"><value>语言</value></data>
+  <data name="Language.Hint" xml:space="preserve"><value>切换显示语言</value></data>
 </root>

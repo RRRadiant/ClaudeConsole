@@ -8,8 +8,8 @@ namespace ClaudeCodePanel.Windows.Views.API;
 /// Matches the Swift APIKeyInputView design.
 ///
 /// Header row shows either:
-///   - A green status indicator with "已加密存储于 Credential Manager" when IsKeySaved is true
-///   - A tertiary hint "输入后自动加密存储" when no key is saved
+///   - A green status indicator with "已保存到 Credential Manager，并同步到 Claude Code 配置" when IsKeySaved is true
+///   - A tertiary hint "输入后会保存并同步到 Claude Code 配置" when no key is saved
 ///
 /// A copy-to-clipboard button appears on the right when the ApiKey text is non-empty.
 /// The input field is a GlassTextField with Variant="Secure" for password-style entry.
@@ -143,8 +143,8 @@ public partial class APIKeyInputView : UserControl
 
     /// <summary>
     /// Updates the StatusIndicator label and color based on IsKeySaved.
-    ///   - true  → green "Running" status, "已加密存储于 Credential Manager"
-    ///   - false → gray "Stopped" status, "输入后自动加密存储"
+    ///   - true  → green "Running" status, "已保存到 Credential Manager，并同步到 Claude Code 配置"
+    ///   - false → gray "Stopped" status, "输入后会保存并同步到 Claude Code 配置"
     /// </summary>
     private void ApplyKeySavedState()
     {
@@ -152,12 +152,12 @@ public partial class APIKeyInputView : UserControl
 
         if (IsKeySaved)
         {
-            KeyStatus.Label = "已加密存储于 Credential Manager";
+            KeyStatus.Label = "已保存到 Credential Manager，并同步到 Claude Code 配置";
             KeyStatus.Status = "Running";
         }
         else
         {
-            KeyStatus.Label = "输入后自动加密存储";
+            KeyStatus.Label = "输入后会保存并同步到 Claude Code 配置";
             KeyStatus.Status = "Stopped";
         }
     }

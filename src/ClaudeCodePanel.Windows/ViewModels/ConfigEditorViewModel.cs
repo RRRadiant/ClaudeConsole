@@ -213,9 +213,11 @@ public partial class ConfigEditorViewModel : ObservableObject
     {
         if (!useRemote)
         {
-            // Keep local changes — advance mtime so the next save will not
-            // detect the same mtime-based conflict again.
-            _lastSavedMtime = DateTime.UtcNow;
+            // Keep local changes — adopt the current on-disk mtime so the next
+            // save overwrites the version we just reviewed, not the stale one.
+            _lastSavedMtime = SelectedFile != null && File.Exists(SelectedFile.Path)
+                ? new FileInfo(SelectedFile.Path).LastWriteTimeUtc
+                : null;
         }
         else
         {
@@ -223,8 +225,12 @@ public partial class ConfigEditorViewModel : ObservableObject
             FileContent = ConflictRemoteContent;
             OriginalContent = ConflictRemoteContent;
             IsModified = false;
+            _lastSavedMtime = SelectedFile != null && File.Exists(SelectedFile.Path)
+                ? new FileInfo(SelectedFile.Path).LastWriteTimeUtc
+                : null;
         }
         HasConflict = false;
+        ErrorMessage = null;
     }
 
     // ──────────────────────────────────────────────

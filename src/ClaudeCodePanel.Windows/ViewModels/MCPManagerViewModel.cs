@@ -57,6 +57,15 @@ public partial class MCPManagerViewModel : ObservableObject
     private string _newCommand = "";
 
     [ObservableProperty]
+    private string _newUrl = "";
+
+    [ObservableProperty]
+    private MCPServerType _newServerType = MCPServerType.Stdio;
+
+    [ObservableProperty]
+    private bool _newEnabled = true;
+
+    [ObservableProperty]
     private List<string> _newArgs = new();
 
     [ObservableProperty]
@@ -156,9 +165,12 @@ public partial class MCPManagerViewModel : ObservableObject
     {
         EditingServer = server;
         NewName = server.Name;
+        NewServerType = server.ServerType;
         NewCommand = server.Command;
+        NewUrl = server.Url;
         NewArgs = new List<string>(server.Args);
         NewEnv = server.Env.Select(kvp => (kvp.Key, kvp.Value)).ToList();
+        NewEnabled = server.Enabled;
         IsAddingServer = true;
     }
 
@@ -174,22 +186,45 @@ public partial class MCPManagerViewModel : ObservableObject
         {
             server = EditingServer;
             server.Name = NewName;
-            server.Command = NewCommand;
-            server.Args = NewArgs.Where(a => !string.IsNullOrEmpty(a)).ToList();
-            server.Env = NewEnv
-                .Where(e => !string.IsNullOrEmpty(e.Key))
-                .ToDictionary(e => e.Key, e => e.Value);
+            server.ServerType = NewServerType;
+            server.Enabled = NewEnabled;
+            server.Url = NewServerType == MCPServerType.Sse ? NewUrl : "";
+            server.Command = NewServerType == MCPServerType.Sse ? "" : NewCommand;
+            server.Args = NewServerType is MCPServerType.Stdio
+                ? NewArgs.Where(a => !string.IsNullOrEmpty(a)).ToList()
+                : new List<string>();
+            server.Env = NewServerType is MCPServerType.Stdio
+                ? NewEnv
+                    .Where(e => !string.IsNullOrEmpty(e.Key))
+                    .ToDictionary(e => e.Key, e => e.Value)
+                : new Dictionary<string, string>();
+
+            if (server.ServerType is MCPServerType.Builtin or MCPServerType.Plugin &&
+                string.IsNullOrEmpty(server.ProjectPath))
+            {
+                server.ProjectPath = Directory.GetCurrentDirectory();
+            }
         }
         else
         {
             server = new MCPServerConfig
             {
                 Name = NewName,
-                Command = NewCommand,
-                Args = NewArgs.Where(a => !string.IsNullOrEmpty(a)).ToList(),
-                Env = NewEnv
-                    .Where(e => !string.IsNullOrEmpty(e.Key))
-                    .ToDictionary(e => e.Key, e => e.Value),
+                ServerType = NewServerType,
+                Enabled = NewEnabled,
+                Url = NewServerType == MCPServerType.Sse ? NewUrl : "",
+                Command = NewServerType == MCPServerType.Sse ? "" : NewCommand,
+                Args = NewServerType is MCPServerType.Stdio
+                    ? NewArgs.Where(a => !string.IsNullOrEmpty(a)).ToList()
+                    : new List<string>(),
+                Env = NewServerType is MCPServerType.Stdio
+                    ? NewEnv
+                        .Where(e => !string.IsNullOrEmpty(e.Key))
+                        .ToDictionary(e => e.Key, e => e.Value)
+                    : new Dictionary<string, string>(),
+                ProjectPath = NewServerType is MCPServerType.Builtin or MCPServerType.Plugin
+                    ? Directory.GetCurrentDirectory()
+                    : null
             };
             Servers.Add(server);
         }
@@ -246,9 +281,10 @@ public partial class MCPManagerViewModel : ObservableObject
     /// Write all servers to ~/.claude.json, separating top-level servers
     /// from project-level servers. Preserves all other existing keys in the file.
     /// </summary>
-    private async Task PersistToClaudeJSONAsync()
+    private Task PersistToClaudeJSONAsync()
     {
         var claudePath = _configFileService.ClaudeGlobalConfigPath;
+        var currentProjectPath = Directory.GetCurrentDirectory();
 
         // Read existing .claude.json — preserve every key we don't own
         Dictionary<string, JsonElement> rootDict;
@@ -263,60 +299,116 @@ public partial class MCPManagerViewModel : ObservableObject
             rootDict = new Dictionary<string, JsonElement>();
         }
 
+        Dictionary<string, JsonElement> projects;
+        if (rootDict.TryGetValue("projects", out var existingProjects) &&
+            existingProjects.ValueKind == JsonValueKind.Object)
+        {
+            projects = SharedHelpers.EnumerateJsonObject(existingProjects) ?? new();
+        }
+        else
+        {
+            projects = new Dictionary<string, JsonElement>();
+        }
+
         // Separate top-level and project-level servers
         var topLevelServers = new Dictionary<string, object>();
         var projectServersByPath = new Dictionary<string, Dictionary<string, object>>();
+        var projectPluginStatesByPath = new Dictionary<string, Dictionary<string, bool>>();
+        var touchedProjectPaths = new HashSet<string>(projects.Keys, StringComparer.OrdinalIgnoreCase)
+        {
+            currentProjectPath
+        };
 
         foreach (var server in Servers)
         {
-            var serverDict = ServerToDictionary(server);
-            if (!string.IsNullOrEmpty(server.ProjectPath))
+            if (!string.IsNullOrEmpty(server.ProjectPath) ||
+                server.ServerType is MCPServerType.Builtin or MCPServerType.Plugin)
             {
-                if (!projectServersByPath.ContainsKey(server.ProjectPath))
-                    projectServersByPath[server.ProjectPath] = new Dictionary<string, object>();
-                projectServersByPath[server.ProjectPath][server.Name] = serverDict;
+                var projectPath = string.IsNullOrEmpty(server.ProjectPath)
+                    ? currentProjectPath
+                    : server.ProjectPath;
+                touchedProjectPaths.Add(projectPath);
+
+                if (server.ServerType is MCPServerType.Builtin or MCPServerType.Plugin)
+                {
+                    if (!projectPluginStatesByPath.TryGetValue(projectPath, out var pluginStates))
+                    {
+                        pluginStates = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                        projectPluginStatesByPath[projectPath] = pluginStates;
+                    }
+
+                    pluginStates[server.Name] = server.Enabled;
+                }
+                else
+                {
+                    var serverDict = ServerToDictionary(server);
+                    if (!projectServersByPath.ContainsKey(projectPath))
+                        projectServersByPath[projectPath] = new Dictionary<string, object>();
+                    projectServersByPath[projectPath][server.Name] = serverDict;
+                }
             }
             else
             {
-                topLevelServers[server.Name] = serverDict;
+                topLevelServers[server.Name] = ServerToDictionary(server);
             }
         }
 
         rootDict["mcpServers"] = JsonSerializer.SerializeToElement(topLevelServers);
 
-        // Update project-level mcpServers inside the "projects" key
-        if (projectServersByPath.Count > 0)
+        foreach (var projectPath in touchedProjectPaths)
         {
-            Dictionary<string, JsonElement> projects;
-            if (rootDict.TryGetValue("projects", out var existingProjects) &&
-                existingProjects.ValueKind == JsonValueKind.Object)
+            Dictionary<string, JsonElement> projectData;
+            if (projects.TryGetValue(projectPath, out var existingProject) &&
+                existingProject.ValueKind == JsonValueKind.Object)
             {
-                projects = SharedHelpers.EnumerateJsonObject(existingProjects) ?? new();
+                projectData = SharedHelpers.EnumerateJsonObject(existingProject) ?? new();
             }
             else
             {
-                projects = new Dictionary<string, JsonElement>();
+                projectData = new Dictionary<string, JsonElement>();
             }
 
-            foreach (var (projectPath, servers) in projectServersByPath)
+            if (projectServersByPath.TryGetValue(projectPath, out var servers) && servers.Count > 0)
             {
-                Dictionary<string, JsonElement> projectData;
-                if (projects.TryGetValue(projectPath, out var existingProject) &&
-                    existingProject.ValueKind == JsonValueKind.Object)
-                {
-                    projectData = SharedHelpers.EnumerateJsonObject(existingProject) ?? new();
-                }
-                else
-                {
-                    projectData = new Dictionary<string, JsonElement>();
-                }
-
                 projectData["mcpServers"] = JsonSerializer.SerializeToElement(servers);
-                projects[projectPath] = JsonSerializer.SerializeToElement(projectData);
+            }
+            else
+            {
+                projectData.Remove("mcpServers");
             }
 
-            rootDict["projects"] = JsonSerializer.SerializeToElement(projects);
+            if (projectPluginStatesByPath.TryGetValue(projectPath, out var pluginStates) &&
+                pluginStates.Count > 0)
+            {
+                var enabledServers = pluginStates.Where(static kvp => kvp.Value).Select(static kvp => kvp.Key).ToList();
+                var disabledServers = pluginStates.Where(static kvp => !kvp.Value).Select(static kvp => kvp.Key).ToList();
+
+                if (enabledServers.Count > 0)
+                    projectData["enabledMcpjsonServers"] = JsonSerializer.SerializeToElement(enabledServers);
+                else
+                    projectData.Remove("enabledMcpjsonServers");
+
+                if (disabledServers.Count > 0)
+                    projectData["disabledMcpjsonServers"] = JsonSerializer.SerializeToElement(disabledServers);
+                else
+                    projectData.Remove("disabledMcpjsonServers");
+            }
+            else if (projectPath.Equals(currentProjectPath, StringComparison.OrdinalIgnoreCase))
+            {
+                projectData.Remove("enabledMcpjsonServers");
+                projectData.Remove("disabledMcpjsonServers");
+            }
+
+            if (projectData.Count > 0)
+                projects[projectPath] = JsonSerializer.SerializeToElement(projectData);
+            else
+                projects.Remove(projectPath);
         }
+
+        if (projects.Count > 0)
+            rootDict["projects"] = JsonSerializer.SerializeToElement(projects);
+        else
+            rootDict.Remove("projects");
 
         try
         {
@@ -327,6 +419,8 @@ public partial class MCPManagerViewModel : ObservableObject
         {
             ErrorMessage = $"保存到 .claude.json 失败: {ex.Message}";
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -338,6 +432,7 @@ public partial class MCPManagerViewModel : ObservableObject
         var dict = new Dictionary<string, object>
         {
             ["type"] = server.ServerType == MCPServerType.Sse ? "sse" : "stdio",
+            ["enabled"] = server.Enabled
         };
 
         if (server.ServerType == MCPServerType.Sse)
@@ -364,6 +459,9 @@ public partial class MCPManagerViewModel : ObservableObject
     {
         NewName = "";
         NewCommand = "";
+        NewUrl = "";
+        NewServerType = MCPServerType.Stdio;
+        NewEnabled = true;
         NewArgs = new List<string>();
         NewEnv = new List<(string, string)>();
         NewArgInput = "";

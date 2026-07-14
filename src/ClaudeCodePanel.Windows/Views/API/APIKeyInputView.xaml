@@ -8,8 +8,8 @@
         APIKeyInputView — a reusable UserControl for entering a provider API key.
 
         Matches the Swift APIKeyInputView:
-          - Header row: green status indicator when key saved ("已加密存储于 Credential Manager"),
-            or tertiary hint text when no key is saved ("输入后自动加密存储")
+          - Header row: green status indicator when key saved ("已保存到 Credential Manager，并同步到 Claude Code 配置"),
+            or tertiary hint text when no key is saved ("输入后会保存并同步到 Claude Code 配置")
           - Copy-to-clipboard button (visible only when the text is non-empty)
           - GlassTextField with Variant="Secure" for password-style input
 
@@ -32,7 +32,7 @@
             <!-- Left: status indicator (green when saved, gray otherwise) -->
             <shared:StatusIndicator x:Name="KeyStatus"
                                     Grid.Column="0"
-                                    Label="输入后自动加密存储"
+                                    Label="输入后会保存并同步到 Claude Code 配置"
                                     Status="Stopped"/>
 
             <!-- Right: copy-to-clipboard button (shown only when text is non-empty) -->

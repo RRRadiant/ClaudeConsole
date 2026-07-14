@@ -132,32 +132,26 @@ public partial class DashboardViewModel : ObservableObject
 
             var (totalMCPServersCount, activeMCPServersCount) = await mcpTask;
             var installedSkillsCount = await skillsTask;
+            var synced = SyncService.Instance.SyncAll();
 
             // ── API credential check ──
             bool apiConnected = false;
             string apiProvider = "";
-
-            if (configuredProvider.HasValue && _credentialService.Exists(configuredProvider.Value.CredentialKey()))
+            APIProvider? effectiveProvider = configuredProvider;
+            if (!effectiveProvider.HasValue &&
+                synced.DidSync &&
+                (!string.IsNullOrEmpty(synced.BaseURL) || !string.IsNullOrEmpty(synced.ApiKey)))
             {
-                apiConnected = true;
-                apiProvider = configuredProvider.Value.DisplayName();
+                effectiveProvider = synced.Provider;
             }
 
-            if (!apiConnected)
+            if (effectiveProvider.HasValue && _credentialService.Exists(effectiveProvider.Value.CredentialKey()))
             {
-                foreach (var provider in APIProviderExtensions.AllCases)
-                {
-                    if (_credentialService.Exists(provider.CredentialKey()))
-                    {
-                        apiConnected = true;
-                        apiProvider = provider.DisplayName();
-                        break;
-                    }
-                }
+                apiConnected = true;
+                apiProvider = effectiveProvider.Value.DisplayName();
             }
 
             // ── SyncService fallback ──
-            var synced = SyncService.Instance.SyncAll();
             if (synced.DidSync)
             {
                 if (!apiConnected && !string.IsNullOrEmpty(synced.ApiKey))

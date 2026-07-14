@@ -11,6 +11,7 @@ namespace ClaudeCodePanel.Windows.Services;
 public interface IConfigFileService
 {
     string SettingsPath { get; }
+    string SettingsLocalPath { get; }
     string McpPath { get; }
     string SkillsDirectory { get; }
     string ClaudeGlobalConfigPath { get; }
@@ -68,7 +69,7 @@ public interface IEnvironmentService
 
 public interface IUpdateService
 {
-    Task<UpdateInfo?> CheckForUpdateAsync();
+    Task<UpdateCheckResult> CheckForUpdateAsync();
 }
 
 // ── SyncService ────────────────────────────────────────────

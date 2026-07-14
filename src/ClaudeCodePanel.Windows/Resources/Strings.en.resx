@@ -30,6 +30,15 @@
   <data name="Theme.DarkHint" xml:space="preserve"><value>Click for light mode</value></data>
   <data name="Theme.Light" xml:space="preserve"><value>Light Mode</value></data>
   <data name="Theme.LightHint" xml:space="preserve"><value>Click for dark mode</value></data>
+  <data name="Theme.Appearance" xml:space="preserve"><value>Appearance</value></data>
+  <data name="Theme.ModeSystem" xml:space="preserve"><value>System</value></data>
+  <data name="Theme.ModeLight" xml:space="preserve"><value>White</value></data>
+  <data name="Theme.ModeDark" xml:space="preserve"><value>Black</value></data>
+  <data name="Theme.ModeCustom" xml:space="preserve"><value>Custom</value></data>
+  <data name="Theme.Accent" xml:space="preserve"><value>Accent Color</value></data>
+  <data name="Theme.AccentAction" xml:space="preserve"><value>Pick Color</value></data>
+  <data name="Theme.AccentHint" xml:space="preserve"><value>Picking a color switches to the custom palette</value></data>
+  <data name="Theme.AccentActiveHint" xml:space="preserve"><value>Custom accent is currently active</value></data>
 
   <!-- Update -->
   <data name="Update.Checking" xml:space="preserve"><value>Checking…</value></data>
@@ -52,4 +61,6 @@
   <!-- Language -->
   <data name="Language.Chinese" xml:space="preserve"><value>中文</value></data>
   <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.Label" xml:space="preserve"><value>Language</value></data>
+  <data name="Language.Hint" xml:space="preserve"><value>Switch the display language</value></data>
 </root>

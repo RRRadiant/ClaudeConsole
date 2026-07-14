@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using ClaudeCodePanel.Windows.Helpers;
@@ -275,7 +276,14 @@ public partial class SkillManagerViewModel : ObservableObject
     public void LoadInstalledSkills()
     {
         var skills = _skillRepo.ListInstalledSkills();
+        var pluginStates = LoadPluginStates().States;
         var seenIDs = new HashSet<string>(skills.Select(s => s.Id));
+
+        foreach (var skill in skills)
+        {
+            if (pluginStates.TryGetValue(skill.Id, out var isEnabled))
+                skill.IsEnabled = isEnabled;
+        }
 
         // Merge with skills detected via SyncService (from claude.json enabledPlugins, etc.)
         var synced = _syncService.SyncAll();
@@ -302,7 +310,7 @@ public partial class SkillManagerViewModel : ObservableObject
                             : "配置中引用 (未下载)",
                         Source = SkillSource.Marketplace,
                         IsInstalled = isOnDisk,
-                        IsEnabled = true,
+                        IsEnabled = pluginStates.GetValueOrDefault(id, true),
                         InstalledPath = isOnDisk ? skillPath : null
                     });
                 }
@@ -393,7 +401,9 @@ public partial class SkillManagerViewModel : ObservableObject
     /// </summary>
     public void ToggleSkill(SkillItem skill)
     {
-        skill.IsEnabled = !skill.IsEnabled;
+        var nextState = !skill.IsEnabled;
+        PersistPluginState(skill.Id, nextState);
+        skill.IsEnabled = nextState;
     }
 
     /// <summary>
@@ -435,5 +445,126 @@ public partial class SkillManagerViewModel : ObservableObject
             IsInstalling = false;
         }
     }
+
+    internal static string SkillIdFromPluginKey(string pluginKey)
+    {
+        var atIndex = pluginKey.IndexOf('@');
+        return atIndex >= 0 ? pluginKey[..atIndex] : pluginKey;
+    }
+
+    internal static Dictionary<string, bool> ReadPluginStates(Dictionary<string, JsonElement>? settingsDict)
+    {
+        var states = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        if (settingsDict == null ||
+            !settingsDict.TryGetValue("enabledPlugins", out var pluginsElement) ||
+            pluginsElement.ValueKind != JsonValueKind.Object)
+        {
+            return states;
+        }
+
+        foreach (var plugin in pluginsElement.EnumerateObject())
+        {
+            var id = SkillIdFromPluginKey(plugin.Name);
+            var isEnabled = plugin.Value.ValueKind != JsonValueKind.False;
+            states[id] = isEnabled;
+        }
+
+        return states;
+    }
+
+    internal static void WritePluginState(
+        Dictionary<string, JsonElement> settingsDict,
+        string skillId,
+        bool isEnabled)
+    {
+        var enabledPlugins = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        if (settingsDict.TryGetValue("enabledPlugins", out var existingPlugins) &&
+            existingPlugins.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var plugin in existingPlugins.EnumerateObject())
+                enabledPlugins[plugin.Name] = plugin.Value.Clone();
+        }
+
+        var targetKey = enabledPlugins.Keys
+            .FirstOrDefault(key => SkillIdFromPluginKey(key).Equals(skillId, StringComparison.OrdinalIgnoreCase))
+            ?? skillId;
+
+        enabledPlugins[targetKey] = JsonSerializer.SerializeToElement(isEnabled);
+        settingsDict["enabledPlugins"] = JsonSerializer.SerializeToElement(enabledPlugins);
+    }
+
+    private PluginSettingsState LoadPluginStates()
+    {
+        Dictionary<string, JsonElement>? settingsDict;
+        Dictionary<string, JsonElement>? localDict;
+        try
+        {
+            settingsDict = _configFileService.ReadJSON(_configFileService.SettingsPath);
+        }
+        catch
+        {
+            settingsDict = null;
+        }
+
+        try
+        {
+            localDict = _configFileService.ReadJSON(_configFileService.SettingsLocalPath);
+        }
+        catch
+        {
+            localDict = null;
+        }
+
+        var mergedStates = ReadPluginStates(settingsDict);
+        foreach (var kvp in ReadPluginStates(localDict))
+            mergedStates[kvp.Key] = kvp.Value;
+
+        return new PluginSettingsState(settingsDict, localDict, mergedStates);
+    }
+
+    private void PersistPluginState(string skillId, bool isEnabled)
+    {
+        var pluginSettings = LoadPluginStates();
+        var useLocalSettings = pluginSettings.LocalDict is not null &&
+            (PluginKeyExists(pluginSettings.LocalDict, skillId) ||
+             PluginContainerExists(pluginSettings.LocalDict));
+
+        var settingsPath = useLocalSettings
+            ? _configFileService.SettingsLocalPath
+            : _configFileService.SettingsPath;
+        var dir = Path.GetDirectoryName(settingsPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        var rootDict = useLocalSettings
+            ? pluginSettings.LocalDict ?? new Dictionary<string, JsonElement>()
+            : pluginSettings.SettingsDict ?? new Dictionary<string, JsonElement>();
+
+        WritePluginState(rootDict, skillId, isEnabled);
+        _configFileService.WriteJSON(rootDict, settingsPath);
+    }
+
+    private static bool PluginKeyExists(Dictionary<string, JsonElement> settingsDict, string skillId)
+    {
+        if (!settingsDict.TryGetValue("enabledPlugins", out var pluginsElement) ||
+            pluginsElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        return pluginsElement.EnumerateObject().Any(plugin =>
+            SkillIdFromPluginKey(plugin.Name).Equals(skillId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool PluginContainerExists(Dictionary<string, JsonElement> settingsDict)
+    {
+        return settingsDict.TryGetValue("enabledPlugins", out var pluginsElement) &&
+               pluginsElement.ValueKind == JsonValueKind.Object;
+    }
+
+    private sealed record PluginSettingsState(
+        Dictionary<string, JsonElement>? SettingsDict,
+        Dictionary<string, JsonElement>? LocalDict,
+        Dictionary<string, bool> States);
 
 }

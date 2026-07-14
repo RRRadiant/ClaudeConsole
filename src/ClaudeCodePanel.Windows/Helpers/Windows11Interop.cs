@@ -104,11 +104,10 @@ namespace ClaudeCodePanel.Windows.Helpers
         }
 
         /// <summary>
-        /// Applies the dark title bar to the specified WPF window using
-        /// DWMWA_USE_IMMERSIVE_DARK_MODE (attribute 20).  Works on Windows
-        /// 10 1903+ and Windows 11.
+        /// Applies a dark or light immersive title bar to the specified WPF
+        /// window using DWMWA_USE_IMMERSIVE_DARK_MODE (attribute 20).
         /// </summary>
-        public static void ApplyDarkTitleBar(Window window)
+        public static void ApplyTitleBarTheme(Window window, bool dark)
         {
             if (window is null)
                 throw new ArgumentNullException(nameof(window));
@@ -116,7 +115,7 @@ namespace ClaudeCodePanel.Windows.Helpers
             void OnSourceInitialized(object? sender, EventArgs e)
             {
                 window.SourceInitialized -= OnSourceInitialized;
-                SetDarkTitleBar(window);
+                SetTitleBarTheme(window, dark);
             }
 
             if (window.IsInitialized)
@@ -127,6 +126,11 @@ namespace ClaudeCodePanel.Windows.Helpers
             {
                 window.SourceInitialized += OnSourceInitialized;
             }
+        }
+
+        public static void ApplyDarkTitleBar(Window window)
+        {
+            ApplyTitleBarTheme(window, dark: true);
         }
 
         // ----------------------------------------------------------------
@@ -145,9 +149,7 @@ namespace ClaudeCodePanel.Windows.Helpers
             if (hwnd == IntPtr.Zero)
                 return;
 
-            // Apply dark title bar so that system context menus and
-            // the window frame match the Mica look.
-            SetDarkTitleBarInternal(hwnd);
+            SetTitleBarThemeInternal(hwnd, dark: true);
 
             // Enable the Mica backdrop.
             int useMica = 1; // BOOL TRUE
@@ -160,18 +162,18 @@ namespace ClaudeCodePanel.Windows.Helpers
                 (Color)ColorConverter.ConvertFromString("#080d1f"));
         }
 
-        private static void SetDarkTitleBar(Window window)
+        private static void SetTitleBarTheme(Window window, bool dark)
         {
             var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
             if (hwnd == IntPtr.Zero)
                 return;
 
-            SetDarkTitleBarInternal(hwnd);
+            SetTitleBarThemeInternal(hwnd, dark);
         }
 
-        private static void SetDarkTitleBarInternal(IntPtr hwnd)
+        private static void SetTitleBarThemeInternal(IntPtr hwnd, bool dark)
         {
-            int useDarkMode = 1; // BOOL TRUE
+            int useDarkMode = dark ? 1 : 0;
             DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
         }
     }

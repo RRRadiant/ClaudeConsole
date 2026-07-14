@@ -63,24 +63,8 @@ public sealed class SyncService : ISyncService
                 result = ApplyEnv(localEnv, result);
         }
 
-        // --- Extract enabledPlugins → skillIds (strip @source suffix) ---
-        var mergedForPlugins = new Dictionary<string, JsonElement>(settingsDict);
-        foreach (var kvp in localDict)
-            mergedForPlugins[kvp.Key] = kvp.Value;
-
-        if (mergedForPlugins.TryGetValue("enabledPlugins", out var pluginsElement) &&
-            pluginsElement.ValueKind == JsonValueKind.Object)
-        {
-            var pluginsDict = EnumerateJsonObject(pluginsElement);
-            if (pluginsDict != null)
-            {
-                result.SkillIds = pluginsDict.Keys.Select(key =>
-                {
-                    var atIndex = key.IndexOf('@');
-                    return atIndex >= 0 ? key[..atIndex] : key;
-                }).ToList();
-            }
-        }
+        // --- Extract enabledPlugins → enabled skill ids (strip @source suffix) ---
+        result.SkillIds = ExtractEnabledSkillIds(settingsDict, localDict);
 
         // --- Extract MCP servers from ~/.claude.json (primary source) ---
         result.McpServers = ExtractMCPFromClaudeGlobalJSON();
@@ -168,6 +152,36 @@ public sealed class SyncService : ISyncService
             config.EnabledModels = models;
 
         return config;
+    }
+
+    internal static List<string> ExtractEnabledSkillIds(
+        Dictionary<string, JsonElement> settingsDict,
+        Dictionary<string, JsonElement> localDict)
+    {
+        var mergedPlugins = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        if (settingsDict.TryGetValue("enabledPlugins", out var settingsPluginsElement) &&
+            settingsPluginsElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var plugin in settingsPluginsElement.EnumerateObject())
+                mergedPlugins[plugin.Name] = plugin.Value.Clone();
+        }
+        if (localDict.TryGetValue("enabledPlugins", out var localPluginsElement) &&
+            localPluginsElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var plugin in localPluginsElement.EnumerateObject())
+                mergedPlugins[plugin.Name] = plugin.Value.Clone();
+        }
+
+        return mergedPlugins
+            .Where(static kvp => kvp.Value.ValueKind != JsonValueKind.False)
+            .Select(static kvp =>
+            {
+                var key = kvp.Key;
+                var atIndex = key.IndexOf('@');
+                return atIndex >= 0 ? key[..atIndex] : key;
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     /// <summary>
@@ -271,7 +285,8 @@ public sealed class SyncService : ISyncService
                                         Args = new(),
                                         Env = new(),
                                         Enabled = true,
-                                        Status = MCPServerStatus.Running
+                                        Status = MCPServerStatus.Running,
+                                        ProjectPath = cwd
                                     };
                                     servers.Add(server);
                                 }

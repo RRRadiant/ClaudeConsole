@@ -402,6 +402,23 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         if (Directory.Exists(targetDir))
             Directory.Delete(targetDir, recursive: true);
 
+        try
+        {
+            InstallFromGitURLAsync(url, targetDir).GetAwaiter().GetResult();
+        }
+        catch (SkillRepoException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new SkillRepoException(
+                $"Failed to run git clone: {ex.Message}", ex);
+        }
+    }
+
+    private static async Task InstallFromGitURLAsync(string url, string targetDir)
+    {
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -421,25 +438,29 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         try
         {
             process.Start();
-            process.WaitForExit();
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            var timeoutTask = Task.Delay(TimeSpan.FromMinutes(3));
+            var exitTask = process.WaitForExitAsync();
+            var completed = await Task.WhenAny(exitTask, timeoutTask).ConfigureAwait(false);
+
+            if (completed == timeoutTask)
+            {
+                try { process.Kill(entireProcessTree: true); } catch (Exception ex) { SharedHelpers.SafeLog("SkillRepositoryService.InstallFromGitURLAsync.Kill", ex); }
+                throw new SkillRepoException("git clone timed out after 3 minutes");
+            }
+
+            await exitTask.ConfigureAwait(false);
+            await stdoutTask.ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
-                var error = process.StandardError.ReadToEnd().Trim();
+                var error = (await stderrTask.ConfigureAwait(false)).Trim();
                 throw new SkillRepoException(
                     string.IsNullOrEmpty(error)
                         ? $"git clone failed with exit code {process.ExitCode}"
                         : $"git clone failed: {error}");
             }
-        }
-        catch (SkillRepoException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new SkillRepoException(
-                $"Failed to run git clone: {ex.Message}", ex);
         }
         finally
         {
@@ -504,6 +525,8 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         try
         {
             process.Start();
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
             var timeoutTask = Task.Delay(TimeSpan.FromMinutes(3));
             var exitTask = process.WaitForExitAsync();
             var completed = await Task.WhenAny(exitTask, timeoutTask);
@@ -515,10 +538,11 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
             }
 
             await exitTask;
+            await stdoutTask.ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
-                var error = (await process.StandardError.ReadToEndAsync()).Trim();
+                var error = (await stderrTask.ConfigureAwait(false)).Trim();
                 throw new SkillRepoException(
                     string.IsNullOrEmpty(error)
                         ? $"git clone failed with exit code {process.ExitCode}"

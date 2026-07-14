@@ -23,7 +23,7 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <shared:StatusIndicator x:Name="KeyStatus"
-                                                Label="输入后自动加密存储"
+                                                Label="输入后会保存并同步到 Claude Code 配置"
                                                 Status="Stopped"/>
                         <Button x:Name="CopyKeyBtn"
                                 Click="OnCopyKey"
