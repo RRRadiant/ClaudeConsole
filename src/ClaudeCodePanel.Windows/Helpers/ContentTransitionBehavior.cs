@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using ClaudeCodePanel.Windows.Design;
 
 namespace ClaudeCodePanel.Windows.Helpers;
 
@@ -78,6 +79,14 @@ public static class ContentTransitionBehavior
         // Don't animate if the content hasn't actually changed
         if (Equals(cc.Content, newContent))
             return;
+
+        if (ShouldReduceEffects())
+        {
+            cc.Content = newContent;
+            cc.Opacity = 1;
+            cc.RenderTransform = Transform.Identity;
+            return;
+        }
 
         // ── Step 1: Exit animation ──
         await AnimateExitAsync(cc);
@@ -169,5 +178,13 @@ public static class ContentTransitionBehavior
         sb.Begin();
 
         return tcs.Task;
+    }
+
+    private static bool ShouldReduceEffects()
+    {
+        var reduceMotion = SystemParameters.ClientAreaAnimation == false;
+        var remoteSession = SystemParameters.IsRemoteSession;
+        var renderTier = RenderCapability.Tier >> 16;
+        return UiPerformancePolicy.ShouldReduceEffects(reduceMotion, remoteSession, renderTier);
     }
 }

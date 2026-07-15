@@ -4,6 +4,13 @@ obj/
 publish/
 publish-self-contained/
 
+## Web UI build artifacts and dependencies
+node_modules/
+dist/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
 ## IDE
 .vs/
 *.user
@@ -22,5 +29,6 @@ Thumbs.db
 ## Release artifacts
 /release/
 /publish-final/
-/ClaudeConsole-Portable.zip
+/ClaudeConsole-*.zip
 /publish/
+/.superpowers/

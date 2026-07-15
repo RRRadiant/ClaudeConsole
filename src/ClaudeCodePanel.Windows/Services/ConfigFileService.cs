@@ -317,8 +317,15 @@ public sealed class ConfigFileService : IConfigFileService
 
     private static void ValidateExpectedMtime(string path, DateTime? expectedMtime)
     {
-        if (!expectedMtime.HasValue || !File.Exists(path))
+        if (!expectedMtime.HasValue)
             return;
+
+        if (!File.Exists(path))
+        {
+            throw new ConfigFileException(
+                ConfigFileError.ConflictDetected,
+                $"File was deleted externally: {path}");
+        }
 
         var currentMtime = File.GetLastWriteTimeUtc(path);
         if (Math.Abs((currentMtime - expectedMtime.Value).TotalSeconds) > 0.1)
@@ -344,8 +351,20 @@ public sealed class ConfigFileService : IConfigFileService
         {
             File.WriteAllText(tempPath, content);
 
-            if (File.Exists(path))
+            var containsSensitiveContent = IsSensitiveConfigPath(path) ||
+                                           ContainsSensitiveContent(content) ||
+                                           (File.Exists(path) && ContainsSensitiveContent(File.ReadAllText(path)));
+
+            if (containsSensitiveContent)
+            {
+                // Backups must not preserve removed or rotated credentials in plaintext.
+                if (File.Exists(backupPath))
+                    File.Delete(backupPath);
+            }
+            else if (File.Exists(path))
+            {
                 File.Copy(path, backupPath, overwrite: true);
+            }
 
             File.Move(tempPath, path, overwrite: true);
         }
@@ -359,5 +378,62 @@ public sealed class ConfigFileService : IConfigFileService
             if (File.Exists(tempPath))
                 File.Delete(tempPath);
         }
+    }
+
+    private static bool IsSensitiveConfigPath(string path)
+    {
+        var fileName = Path.GetFileName(path);
+        return fileName.Equals("settings.local.json", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Equals(".env", StringComparison.OrdinalIgnoreCase) ||
+               fileName.EndsWith(".env", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsSensitiveContent(string content)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            return ContainsSensitiveProperty(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            // WriteText also supports hand-edited configuration. A conservative marker scan
+            // prevents invalid JSON containing credentials from being copied into a backup.
+            return IsSensitivePropertyName(content);
+        }
+    }
+
+    private static bool ContainsSensitiveProperty(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (IsSensitivePropertyName(property.Name) ||
+                    ContainsSensitiveProperty(property.Value))
+                {
+                    return true;
+                }
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (ContainsSensitiveProperty(item))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSensitivePropertyName(string value)
+    {
+        return value.Contains("token", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("api_key", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("apikey", StringComparison.OrdinalIgnoreCase);
     }
 }

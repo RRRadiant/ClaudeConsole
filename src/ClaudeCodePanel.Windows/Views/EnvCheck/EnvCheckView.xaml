@@ -3,14 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared"
              xmlns:vm="clr-namespace:ClaudeCodePanel.Windows.ViewModels"
-             Background="{DynamicResource ContentBackgroundBrush}">
+             Background="Transparent">
 
     <UserControl.Resources>
         <!-- ── Dep item template ── -->
         <DataTemplate x:Key="DepItemTemplate" DataType="{x:Type vm:EnvCheckViewModel+DepItem}">
             <Border CornerRadius="{DynamicResource RadiusSm}"
-                    Background="{DynamicResource GlassCardBgBrush}"
-                    BorderBrush="{DynamicResource BorderCardBrush}"
+                    Background="{DynamicResource GlassSubtleBrush}"
+                    BorderBrush="{DynamicResource GlassRimBrush}"
                     BorderThickness="1"
                     Padding="16,14"
                     Margin="0,0,0,8">
@@ -112,7 +112,7 @@
          ═══════════════════════════════════════════════════════════ -->
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="32,28" MaxWidth="620">
+        <Grid Margin="32,28" MaxWidth="860">
             <StackPanel>
 
                 <!-- ── Section Header with summary pills ── -->

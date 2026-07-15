@@ -1,95 +1,104 @@
 # ClaudeConsole
 
-A Windows desktop app for managing [Claude Code](https://claude.ai/code) configuration — API providers, models, MCP servers, skills, and config files.
+ClaudeConsole is a Windows desktop app for managing [Claude Code](https://claude.ai/code) configuration: API providers, models, config files, MCP servers, skills, installation, and local environment health.
 
-> 🖥️ Windows port of the macOS app [ClaudeCodePanel](https://github.com/RRRadiant/ClaudeCodePanel).
+It is a Windows port of the macOS [ClaudeCodePanel](https://github.com/RRRadiant/ClaudeCodePanel), built with a React/WebView2 workspace and a native WPF fallback.
 
-## ✨ Features
+## Features
 
-| Panel | Description |
-|-------|-------------|
-| **Dashboard** | Claude Code status, API connection, model count, MCP servers, skills overview |
-| **API Config** | Manage API keys (saved to Windows Credential Manager and synced into Claude Code local config), support for Anthropic / OpenAI / DeepSeek / Custom, connection testing, model detection |
-| **Config Editor** | Browse and edit `~/.claude/` config files with mtime conflict detection and backup writes |
-| **MCP Servers** | Add, edit, delete MCP servers with connection testing and local display-name aliases |
-| **Skills** | Browse GitHub Marketplace, install / uninstall skills, toggle enabled state |
-| **Installer** | One-click install / uninstall Claude Code CLI (npm / winget) |
-| **Env Check** | Detect Node.js, npm, and Git installation status and versions |
+| Workspace | What it manages |
+|---|---|
+| Dashboard | Claude Code, API, model, MCP, skill, and recent-activity status |
+| API Config | Anthropic, OpenAI, DeepSeek, and custom providers; credentials use Windows Credential Manager |
+| Config Editor | Claude Code configuration files with conflict detection and backup writes |
+| MCP Servers | Server definitions, local display names, and connection tests |
+| Skills | Installed skills, GitHub marketplace discovery, install, uninstall, and enable state |
+| Installer | Claude Code CLI installation and removal through npm or winget |
+| Environment | Node.js, npm, and Git detection, versions, and paths |
 
-### 🎨 UI
-- Windows 11 Mica backdrop (falls back to dark solid background on Windows 10)
-- Dark theme, custom title bar
-- Sidebar navigation with content area swapping
+The React workspace provides the liquid-glass shell, dashboard, responsive navigation, and presentation for all seven workspaces. The .NET host currently supplies dashboard and theme data through a typed WebView2 bridge. Native WPF panels remain the operational fallback for business workflows that have not yet been connected to the bridge.
 
-### 🔄 Auto Update
-- Checks GitHub Releases for new versions on startup
-- Manual "Check for Updates" button in the sidebar footer
-- Update notification banner appears when a newer version is found — one click to download
+## Requirements
 
-## 📦 Download
+- Windows 10 version 2004 or later; Windows 11 is recommended
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [Node.js](https://nodejs.org/) with npm
+- Visual Studio 2022 is optional
 
-Go to [Releases](https://github.com/RRRadiant/ClaudeConsole/releases) and download the latest `ClaudeConsole.exe`. Double-click to run — no .NET runtime installation required.
+Packaged self-contained builds do not require a separate .NET runtime. They still require the Microsoft Edge WebView2 Runtime, which is normally present on supported Windows installations; the native WPF fallback remains available if WebView2 cannot start.
 
-## 🔧 Build from Source
+## Build from source
 
 ```powershell
 git clone https://github.com/RRRadiant/ClaudeConsole.git
 cd ClaudeConsole
+
+npm ci --prefix src/ClaudeCodePanel.WebUI
+npm test --prefix src/ClaudeCodePanel.WebUI
+npm run build --prefix src/ClaudeCodePanel.WebUI
+
 dotnet restore ClaudeCodePanel.Windows.sln
-dotnet build ClaudeCodePanel.Windows.sln -c Release
-dotnet run -c Release --project src/ClaudeCodePanel.Windows
+dotnet test ClaudeCodePanel.Windows.sln --configuration Release
+dotnet run --configuration Release --project src/ClaudeCodePanel.Windows
 ```
 
-Or open `ClaudeCodePanel.Windows.sln` in Visual Studio 2022 and press F5.
+The .NET project also builds the Web UI automatically and copies its generated assets into the application output.
 
-## 🧱 Tech Stack
+## Create a portable package
 
-| Layer | Technology |
-|-------|-----------|
-| UI | WPF (XAML) |
-| MVVM | CommunityToolkit.Mvvm |
-| DI | Microsoft.Extensions.DependencyInjection |
-| HTTP | System.Net.Http |
-| JSON | System.Text.Json |
-| Credential Storage | Windows Credential Manager (advapi32.dll) |
-| File Watching | System.IO.FileSystemWatcher |
+```powershell
+dotnet publish src/ClaudeCodePanel.Windows/ClaudeCodePanel.Windows.csproj `
+  --configuration Release `
+  --framework net9.0-windows10.0.19041.0 `
+  --runtime win-x64 `
+  --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:DebugType=none `
+  --output publish/win-x64
 
-## 📁 Project Structure
-
-```
-src/ClaudeCodePanel.Windows/
-├── App.xaml(.cs)              # Entry point, DI container, Mica setup
-├── Models/                    # APIProvider, DashboardSummary, MCPServerConfig, SkillItem, UpdateInfo
-├── Services/                  # ConfigFileService, CredentialService, MCPService, SyncService,
-│                              # SkillRepositoryService, InstallerService, EnvironmentService,
-│                              # FileWatcherService, UpdateService
-├── ViewModels/                # MainViewModel + 7 panel ViewModels
-├── Views/
-│   ├── MainWindow.xaml        # Main window (custom title bar + sidebar + content area)
-│   ├── Sidebar/               # Sidebar navigation + version/update status
-│   ├── Dashboard/             # Dashboard panel
-│   ├── API/                   # API config panel
-│   ├── Config/                # Config file editor
-│   ├── MCP/                   # MCP server manager
-│   ├── Skills/                # Skill manager
-│   ├── Installer/             # CLI installer
-│   ├── EnvCheck/              # Environment check
-│   └── Shared/                # 8 shared controls (GlassCard, GlassButton, StatusIndicator, etc.)
-├── Converters/                # XAML value converters
-├── Helpers/                   # MCPDisplayNameStore, Windows11Interop
-└── Resources/Themes/          # DarkTheme.xaml
+Compress-Archive `
+  -Path publish/win-x64/* `
+  -DestinationPath ClaudeConsole-Portable.zip `
+  -Force
 ```
 
-## 🔄 macOS Equivalents
+`publish/`, `release/`, and the portable ZIP are ignored by Git so local packages do not enter source commits.
 
-| macOS (SwiftUI) | Windows (WPF) |
-|---|---|
-| `@Observable` macro | `[ObservableProperty]` source generator |
-| macOS Keychain | Windows Credential Manager |
-| `~/.claude/` | `%USERPROFILE%/.claude/` |
-| SF Symbols | Segoe MDL2 Assets |
-| `.glassBackgroundEffect()` | Mica backdrop + semi-transparent brushes |
+## Architecture
 
-## 📄 License
+| Layer | Technology | Responsibility |
+|---|---|---|
+| Desktop host | .NET 9, WPF, WebView2 | Window lifecycle, native fallback, OS integration, asset hosting |
+| Web workspace | React 19, TypeScript, Vite | Liquid-glass presentation, routing, responsive interaction |
+| Host bridge | Typed JSON messages | Dashboard/theme bootstrap, refresh, navigation, fallback |
+| Application logic | CommunityToolkit.Mvvm services and view models | Claude configuration and operational workflows |
+| Storage | System.Text.Json, Windows Credential Manager | Local configuration and protected credentials |
 
-Same as the original [ClaudeCodePanel](https://github.com/RRRadiant/ClaudeCodePanel) project.
+```text
+src/
+├── ClaudeCodePanel.WebUI/          React workspace, bridge client, tests, and Vite build
+├── ClaudeCodePanel.Windows/        WPF host, services, view models, native views, and host bridge
+└── ClaudeCodePanel.Windows.Tests/  xUnit service, view-model, UI-policy, and WebView bridge tests
+
+docs/superpowers/
+├── specs/                          Design specifications and visual evidence
+└── plans/                          Implementation plans
+```
+
+## Verification
+
+```powershell
+npm test --prefix src/ClaudeCodePanel.WebUI
+npm run typecheck --prefix src/ClaudeCodePanel.WebUI
+npm run build --prefix src/ClaudeCodePanel.WebUI
+dotnet test ClaudeCodePanel.Windows.sln --configuration Release
+```
+
+## Download
+
+Published versions are available from [GitHub Releases](https://github.com/RRRadiant/ClaudeConsole/releases).
+
+## License
+
+See [LICENSE](LICENSE). The project follows the licensing terms of the original ClaudeCodePanel project.

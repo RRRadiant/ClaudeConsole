@@ -12,14 +12,14 @@
                 <ControlTemplate TargetType="{x:Type shared:SectionHeader}">
                     <StackPanel>
                         <TextBlock Text="{TemplateBinding Title}"
-                                   FontSize="24"
+                                   FontSize="26"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                    LineHeight="28"/>
                         <TextBlock Text="{TemplateBinding Description}"
                                    FontSize="15"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,10,0,0"
+                                   Margin="0,8,0,0"
                                    LineHeight="24"
                                    TextWrapping="Wrap"/>
                     </StackPanel>

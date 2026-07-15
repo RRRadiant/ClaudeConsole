@@ -9,6 +9,85 @@ namespace ClaudeCodePanel.Windows.Tests.ViewModels;
 public class APIConfigViewModelTests
 {
     [Fact]
+    public void LoadConfig_MigratesSyncedApiKeyToCredentialManager()
+    {
+        var config = new FakeConfigFileService();
+        var credentials = new FakeCredentialService();
+        var sync = new FakeSyncService(new SyncedConfig
+        {
+            DidSync = true,
+            Provider = APIProvider.OpenAI,
+            ApiKey = "legacy-secret"
+        });
+        var viewModel = new APIConfigViewModel(config, credentials, sync);
+
+        viewModel.LoadConfig();
+
+        Assert.Equal("legacy-secret", viewModel.ApiKey);
+        Assert.True(credentials.Exists(APIProvider.OpenAI.CredentialKey()));
+        Assert.True(viewModel.IsKeySaved);
+    }
+
+    [Fact]
+    public void LoadConfig_WhenCredentialMigrationFails_DoesNotClaimKeyIsSaved()
+    {
+        var config = new FakeConfigFileService();
+        var credentials = new FakeCredentialService { ThrowOnSave = true };
+        var sync = new FakeSyncService(new SyncedConfig
+        {
+            DidSync = true,
+            Provider = APIProvider.OpenAI,
+            ApiKey = "legacy-secret"
+        });
+        var viewModel = new APIConfigViewModel(config, credentials, sync);
+
+        viewModel.LoadConfig();
+
+        Assert.Equal("legacy-secret", viewModel.ApiKey);
+        Assert.False(viewModel.IsKeySaved);
+        Assert.False(credentials.Exists(APIProvider.OpenAI.CredentialKey()));
+    }
+
+    [Fact]
+    public async Task SaveConfigAsync_WhenCredentialWriteFails_ClearsSavedStatus()
+    {
+        var config = new FakeConfigFileService();
+        var credentials = new FakeCredentialService { ThrowOnSave = true };
+        var viewModel = new APIConfigViewModel(config, credentials)
+        {
+            SelectedProvider = APIProvider.OpenAI,
+            ApiKey = "new-secret",
+            IsKeySaved = true
+        };
+
+        await viewModel.SaveConfigAsync();
+
+        Assert.False(viewModel.IsKeySaved);
+        Assert.NotNull(viewModel.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SaveConfigAsync_WhenCredentialDeleteFails_ReportsFailureAndKeepsSavedStatus()
+    {
+        var config = new FakeConfigFileService();
+        var credentials = new FakeCredentialService();
+        credentials.Save(APIProvider.OpenAI.CredentialKey(), "existing-secret");
+        credentials.ThrowOnDelete = true;
+        var viewModel = new APIConfigViewModel(config, credentials)
+        {
+            SelectedProvider = APIProvider.OpenAI,
+            ApiKey = "",
+            IsKeySaved = true
+        };
+
+        await viewModel.SaveConfigAsync();
+
+        Assert.True(viewModel.IsKeySaved);
+        Assert.NotNull(viewModel.ErrorMessage);
+        Assert.True(credentials.Exists(APIProvider.OpenAI.CredentialKey()));
+    }
+
+    [Fact]
     public async Task SaveConfigAsync_WritesApiKeyOnlyToSettingsLocal()
     {
         var config = new FakeConfigFileService();
@@ -107,18 +186,32 @@ public class APIConfigViewModelTests
     {
         private readonly Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
 
+        public bool ThrowOnSave { get; init; }
+        public bool ThrowOnDelete { get; set; }
+
         public bool Exists(string key) => _values.ContainsKey(key);
 
         public bool TryRead(string key, out string value) => _values.TryGetValue(key, out value!);
 
         public void Save(string key, string value)
         {
+            if (ThrowOnSave)
+                throw new InvalidOperationException("Credential storage unavailable.");
+
             _values[key] = value;
         }
 
         public void Delete(string key)
         {
+            if (ThrowOnDelete)
+                throw new InvalidOperationException("Credential deletion unavailable.");
+
             _values.Remove(key);
         }
+    }
+
+    private sealed class FakeSyncService(SyncedConfig result) : ISyncService
+    {
+        public SyncedConfig SyncAll() => result;
     }
 }

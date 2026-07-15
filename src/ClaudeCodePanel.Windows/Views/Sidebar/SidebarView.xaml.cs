@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using ClaudeCodePanel.Windows.Design;
 using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 using ThemeMode = ClaudeCodePanel.Windows.Services.ThemeMode;
@@ -22,6 +23,8 @@ public partial class SidebarView : UserControl
     private bool _isLoaded;
     private bool _hasPlayedEntrance;
     private bool _isViewModelAttached;
+    private bool _isCompactMode;
+    private AppearancePanelState _appearancePanelState = AppearancePanelState.Collapsed;
 
     public SidebarView()
     {
@@ -29,6 +32,25 @@ public partial class SidebarView : UserControl
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         DataContextChanged += OnDataContextChanged;
+    }
+
+    public void SetCompactMode(bool isCompact)
+    {
+        _isCompactMode = isCompact;
+        SidebarRoot.Margin = isCompact ? new Thickness(8) : new Thickness(16);
+        BrandPanel.Visibility = isCompact ? Visibility.Collapsed : Visibility.Visible;
+        UtilityPanel.Visibility = isCompact ? Visibility.Collapsed : Visibility.Visible;
+        NavigationRegion.Margin = isCompact
+            ? new Thickness(0, 0, 0, 0)
+            : new Thickness(0, 16, 0, 16);
+
+        foreach (var button in _itemButtons)
+        {
+            button.Height = isCompact ? 48 : 58;
+            button.ToolTip = button.DataContext is SidebarItem item ? item.Title : null;
+            if (button.Template.FindName("navTextPanel", button) is FrameworkElement textPanel)
+                textPanel.Visibility = isCompact ? Visibility.Collapsed : Visibility.Visible;
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -42,6 +64,7 @@ public partial class SidebarView : UserControl
         Dispatcher.BeginInvoke(new Action(() =>
         {
             CacheItemButtons();
+            SetCompactMode(_isCompactMode);
             AttachViewModel();
             RefreshSelectionVisuals();
         }), System.Windows.Threading.DispatcherPriority.Loaded);
@@ -190,6 +213,10 @@ public partial class SidebarView : UserControl
         var currentMode = ThemeService.Instance.CurrentThemeMode;
 
         AppearanceHeadingText.Text = loc.Get("Theme.Appearance").ToUpperInvariant();
+        AppearanceToggleLabelText.Text = loc.Get("Theme.Appearance");
+        AppearanceToggleHintText.Text = ThemeService.Instance.IsDarkTheme
+            ? loc.Get("Theme.ModeDark")
+            : loc.Get("Theme.ModeLight");
 
         ApplyModeButtonState(ThemeModeSystemButton, loc.Get("Theme.ModeSystem"), currentMode == ThemeMode.System);
         ApplyModeButtonState(ThemeModeLightButton, loc.Get("Theme.ModeLight"), currentMode == ThemeMode.Light);
@@ -204,6 +231,17 @@ public partial class SidebarView : UserControl
             ? loc.Get("Theme.AccentActiveHint")
             : loc.Get("Theme.AccentHint");
         PickAccentButton.Content = loc.Get("Theme.AccentAction");
+    }
+
+    private void OnAppearanceToggleClick(object sender, RoutedEventArgs e)
+    {
+        _appearancePanelState = _appearancePanelState.Toggle();
+        AppearancePanel.Visibility = _appearancePanelState.IsExpanded
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        AppearanceToggleChevron.Text = _appearancePanelState.IsExpanded
+            ? "\xE70E"
+            : "\xE70D";
     }
 
     private void ApplyModeButtonState(Button button, string label, bool selected)

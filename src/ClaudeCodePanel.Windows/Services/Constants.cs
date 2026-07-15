@@ -58,11 +58,6 @@ internal static class AppConstants
             "AppData", "Local", "Programs", "Git", "bin", "git.exe"),
     };
 
-    // ── Registry ─────────────────────────────────────────────
-
-    public const string NpmMirror = "--registry=https://registry.npmmirror.com";
-    public const string NpmDefaultRegistry = "";
-
     // ── GitHub ───────────────────────────────────────────────
 
     public const string GitHubOwner = "RRRadiant";

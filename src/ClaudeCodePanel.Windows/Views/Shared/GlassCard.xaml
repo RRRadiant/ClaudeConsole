@@ -24,7 +24,7 @@
                 <ControlTemplate TargetType="{x:Type shared:GlassCard}">
                     <!-- Outer border: carries corner radius, clips content, handles hover/press -->
                     <Border x:Name="OuterBorder"
-                            CornerRadius="{DynamicResource Radius3xl}"
+                            CornerRadius="{DynamicResource RadiusXl}"
                             ClipToBounds="True"
                             RenderTransformOrigin="0.5,0.5">
                         <Border.RenderTransform>
@@ -33,14 +33,15 @@
 
                         <!-- Inner border: provides the stroke + background -->
                         <Border x:Name="StrokeBorder"
-                                CornerRadius="{DynamicResource Radius3xl}"
+                                CornerRadius="{DynamicResource RadiusXl}"
                                 BorderThickness="1"
                                 ClipToBounds="True">
 
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#08FFFFFF" Offset="0"/>
-                                    <GradientStop Color="#0F000000" Offset="1"/>
+                                    <GradientStop Color="#18FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#08000000" Offset="0.62"/>
+                                    <GradientStop Color="#26000000" Offset="1"/>
                                 </LinearGradientBrush>
                             </Border.Background>
 
@@ -51,13 +52,13 @@
                                         IsHitTestVisible="False"
                                         VerticalAlignment="Top"
                                         HorizontalAlignment="Left"
-                                        Width="80" Height="60"
+                                        Width="120" Height="72"
                                         CornerRadius="{DynamicResource RadiusXl}"
                                         Margin="-10,-8,0,0"
-                                        Opacity="0.22">
+                                        Opacity="0.34">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#15FFFFFF" Offset="0"/>
+                                            <GradientStop Color="#2BFFFFFF" Offset="0"/>
                                             <GradientStop Color="#00FFFFFF" Offset="1"/>
                                         </LinearGradientBrush>
                                     </Border.Background>
@@ -88,39 +89,6 @@
                         </Border>
                     </Border>
 
-                    <ControlTemplate.Triggers>
-                        <!-- Pressed state: subtle scale-down -->
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Trigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="CardScale"
-                                                         Storyboard.TargetProperty="ScaleX"
-                                                         To="0.995" Duration="0:0:0.15"
-                                                         EasingFunction="{StaticResource EaseOutCubic}"/>
-                                        <DoubleAnimation Storyboard.TargetName="CardScale"
-                                                         Storyboard.TargetProperty="ScaleY"
-                                                         To="0.995" Duration="0:0:0.15"
-                                                         EasingFunction="{StaticResource EaseOutCubic}"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.EnterActions>
-                            <Trigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="CardScale"
-                                                         Storyboard.TargetProperty="ScaleX"
-                                                         To="1.0" Duration="0:0:0.2"
-                                                         EasingFunction="{StaticResource EaseOutBack}"/>
-                                        <DoubleAnimation Storyboard.TargetName="CardScale"
-                                                         Storyboard.TargetProperty="ScaleY"
-                                                         To="1.0" Duration="0:0:0.2"
-                                                         EasingFunction="{StaticResource EaseOutBack}"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.ExitActions>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

@@ -12,7 +12,7 @@
         <!-- Row 0 — Input area -->
         <Border x:Name="RootBorder"
                 Grid.Row="0"
-                CornerRadius="{DynamicResource RadiusMd}"
+                CornerRadius="{DynamicResource RadiusSm}"
                 ClipToBounds="False">
 
             <Border.Effect>
@@ -24,7 +24,7 @@
             </Border.Effect>
 
             <Border x:Name="StrokeBorder"
-                    CornerRadius="{DynamicResource RadiusMd}"
+                    CornerRadius="{DynamicResource RadiusSm}"
                     BorderThickness="1"
                     Background="{DynamicResource InputBackgroundBrush}"
                     ClipToBounds="True">
@@ -47,6 +47,7 @@
                                    Visibility="Collapsed"/>
 
                         <TextBox x:Name="InputTextBox"
+                                 FocusVisualStyle="{StaticResource KeyboardFocusVisualStyle}"
                                  Background="Transparent"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                  CaretBrush="{DynamicResource AccentBrush}"
@@ -58,6 +59,7 @@
                                  TextChanged="OnTextBoxTextChanged"/>
 
                         <PasswordBox x:Name="InputPasswordBox"
+                                     FocusVisualStyle="{StaticResource KeyboardFocusVisualStyle}"
                                      Background="Transparent"
                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                      CaretBrush="{DynamicResource AccentBrush}"

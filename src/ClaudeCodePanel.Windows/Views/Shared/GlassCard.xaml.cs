@@ -188,8 +188,8 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                 case "Compact":
                     _layoutGrid.Margin = new Thickness(18);
                     _strokeBorder.BorderThickness = new Thickness(1);
-                    _outerBorder.CornerRadius = new CornerRadius(24);
-                    _strokeBorder.CornerRadius = new CornerRadius(24);
+                    _outerBorder.CornerRadius = new CornerRadius(16);
+                    _strokeBorder.CornerRadius = new CornerRadius(16);
                     _borderBrush.Color = BorderRestingColor;
                     RemoveAuroraGlow();
                     break;
@@ -197,16 +197,16 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                 case "Plain":
                     _layoutGrid.Margin = new Thickness(24);
                     _strokeBorder.BorderThickness = new Thickness(0);
-                    _outerBorder.CornerRadius = new CornerRadius(32);
-                    _strokeBorder.CornerRadius = new CornerRadius(32);
+                    _outerBorder.CornerRadius = new CornerRadius(20);
+                    _strokeBorder.CornerRadius = new CornerRadius(20);
                     RemoveAuroraGlow();
                     break;
 
                 case "Aurora":
                     _layoutGrid.Margin = new Thickness(24);
                     _strokeBorder.BorderThickness = new Thickness(1);
-                    _outerBorder.CornerRadius = new CornerRadius(32);
-                    _strokeBorder.CornerRadius = new CornerRadius(32);
+                    _outerBorder.CornerRadius = new CornerRadius(24);
+                    _strokeBorder.CornerRadius = new CornerRadius(24);
                     _borderBrush.Color = BorderAuroraColor;
                     ApplyAuroraGlow();
                     break;
@@ -214,17 +214,28 @@ namespace ClaudeCodePanel.Windows.Views.Shared
                 case "Signal":
                     _layoutGrid.Margin = new Thickness(24);
                     _strokeBorder.BorderThickness = new Thickness(1);
-                    _outerBorder.CornerRadius = new CornerRadius(32);
-                    _strokeBorder.CornerRadius = new CornerRadius(32);
+                    _outerBorder.CornerRadius = new CornerRadius(20);
+                    _strokeBorder.CornerRadius = new CornerRadius(20);
                     _borderBrush.Color = BorderSignalColor;
+                    RemoveAuroraGlow();
+                    break;
+
+                case "Dashboard":
+                    _layoutGrid.Margin = new Thickness(0);
+                    _strokeBorder.BorderThickness = new Thickness(1);
+                    _outerBorder.CornerRadius = new CornerRadius(20);
+                    _strokeBorder.CornerRadius = new CornerRadius(20);
+                    _borderBrush.Color = BorderRestingColor;
+                    _glossHighlight?.SetCurrentValue(VisibilityProperty, Visibility.Collapsed);
+                    _outerBorder.Effect = null;
                     RemoveAuroraGlow();
                     break;
 
                 default: // "Default"
                     _layoutGrid.Margin = new Thickness(24);
                     _strokeBorder.BorderThickness = new Thickness(1);
-                    _outerBorder.CornerRadius = new CornerRadius(32);
-                    _strokeBorder.CornerRadius = new CornerRadius(32);
+                    _outerBorder.CornerRadius = new CornerRadius(20);
+                    _strokeBorder.CornerRadius = new CornerRadius(20);
                     _borderBrush.Color = BorderRestingColor;
                     RemoveAuroraGlow();
                     break;
@@ -240,6 +251,12 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         private void ApplyThemeShadows()
         {
             if (_outerBorder == null) return;
+
+            if (string.Equals(Variant, "Dashboard", StringComparison.Ordinal))
+            {
+                _outerBorder.Effect = null;
+                return;
+            }
 
             bool isDark = ThemeService.Instance.IsDarkTheme;
 
@@ -315,6 +332,9 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         /// </summary>
         private void AnimateContentEntrance()
         {
+            if (string.Equals(Variant, "Dashboard", StringComparison.Ordinal))
+                return;
+
             if (_entranceAnimated) return;
             if (_layoutGrid == null) return;
 
@@ -373,7 +393,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         private void OnMouseEnter(object sender, MouseEventArgs e)
         {
             var variant = Variant ?? "Default";
-            if (variant == "Plain") return;
+            if (variant is "Plain" or "Dashboard") return;
 
             Color target;
             switch (variant)
@@ -395,7 +415,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         private void OnMouseLeave(object sender, MouseEventArgs e)
         {
             var variant = Variant ?? "Default";
-            if (variant == "Plain") return;
+            if (variant is "Plain" or "Dashboard") return;
 
             Color target;
             switch (variant)
@@ -425,7 +445,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
             {
                 From = fromColor,
                 To = targetColor,
-                Duration = TimeSpan.FromMilliseconds(300), // 300 ms as per prompt
+                Duration = TimeSpan.FromMilliseconds(120),
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             };
 

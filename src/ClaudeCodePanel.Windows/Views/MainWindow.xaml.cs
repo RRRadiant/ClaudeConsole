@@ -1,15 +1,22 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using ClaudeCodePanel.Windows.Helpers;
+using ClaudeCodePanel.Windows.Design;
 using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 using ClaudeCodePanel.Windows.Views.Sidebar;
+using ClaudeCodePanel.Windows.WebUI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Web.WebView2.Core;
 
 namespace ClaudeCodePanel.Windows.Views
 {
@@ -75,7 +82,17 @@ namespace ClaudeCodePanel.Windows.Views
         // ── Drag region state ────────────────────────────────────────────────
 
         private readonly MainViewModel _mainViewModel;
+        private readonly DashboardViewModel _dashboardViewModel;
+        private readonly WebUiBridge _webUiBridge;
         private PropertyChangedEventHandler? _themeServicePropertyChangedHandler;
+        private bool _webShellInitialized;
+        private bool _webShellReady;
+        private bool _useWebShell = true;
+
+        private static readonly JsonSerializerOptions WebJsonOptions = new(JsonSerializerDefaults.Web)
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         // ── Constructor ──────────────────────────────────────────────────────
 
@@ -85,6 +102,12 @@ namespace ClaudeCodePanel.Windows.Views
 
             DataContext = mainViewModel;
             _mainViewModel = mainViewModel;
+            _dashboardViewModel = App.Services.GetRequiredService<DashboardViewModel>();
+            _webUiBridge = new WebUiBridge(
+                GetDashboardSummaryAsync,
+                CreateThemeSnapshot,
+                NavigateFromWeb,
+                ShowNativeShell);
 
             // Set initial content without animation (first load)
             ContentArea.Content = mainViewModel.SelectedPanelViewModel;
@@ -94,6 +117,7 @@ namespace ClaudeCodePanel.Windows.Views
 
             // Keep the maximize/restore button glyph in sync with window state.
             StateChanged += OnWindowStateChanged;
+            SizeChanged += OnWindowSizeChanged;
             Closed += OnClosed;
         }
 
@@ -127,15 +151,27 @@ namespace ClaudeCodePanel.Windows.Views
             _themeServicePropertyChangedHandler ??= OnThemeServicePropertyChanged;
             ThemeService.Instance.PropertyChanged -= _themeServicePropertyChangedHandler;
             ThemeService.Instance.PropertyChanged += _themeServicePropertyChangedHandler;
+
+            _ = InitializeWebShellAsync();
         }
 
         private void OnClosed(object? sender, EventArgs e)
         {
             _mainViewModel.PropertyChanged -= OnSelectedPanelViewModelChanged;
             StateChanged -= OnWindowStateChanged;
+            SizeChanged -= OnWindowSizeChanged;
 
             if (_themeServicePropertyChangedHandler != null)
                 ThemeService.Instance.PropertyChanged -= _themeServicePropertyChangedHandler;
+
+            if (WebShellView.CoreWebView2 != null)
+            {
+                WebShellView.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+                WebShellView.CoreWebView2.ProcessFailed -= OnWebProcessFailed;
+                WebShellView.CoreWebView2.NavigationCompleted -= OnWebNavigationCompleted;
+            }
+
+            WebShellView.Dispose();
 
             Closed -= OnClosed;
         }
@@ -150,12 +186,177 @@ namespace ClaudeCodePanel.Windows.Views
                 Windows11Interop.ApplyTitleBarTheme(this, ThemeService.Instance.IsDarkTheme);
             });
 
+            await NotifyWebThemeChangedAsync();
+
             // Force WPF to destroy and recreate the current View so all
             // DynamicResource are re-resolved against the latest appearance state.
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
             var current = _mainViewModel.SelectedPanelViewModel;
             ContentArea.Content = null;
             ContentArea.Content = current;
+        }
+
+        private async Task InitializeWebShellAsync()
+        {
+            if (_webShellInitialized)
+                return;
+
+            _webShellInitialized = true;
+            var assetDirectory = WebUiAssetLocator.GetAssetDirectory(AppContext.BaseDirectory);
+            if (!WebUiAssetLocator.IsReady(assetDirectory))
+            {
+                ShowNativeShell();
+                Debug.WriteLine($"[WebUI] Assets not found: {assetDirectory}");
+                return;
+            }
+
+            try
+            {
+                WebShellView.IsHitTestVisible = false;
+                WebShellView.DefaultBackgroundColor = ThemeService.Instance.IsDarkTheme
+                    ? System.Drawing.Color.FromArgb(0x07, 0x10, 0x1C)
+                    : System.Drawing.Color.FromArgb(0xED, 0xF4, 0xF8);
+
+                await WebShellView.EnsureCoreWebView2Async();
+                var core = WebShellView.CoreWebView2;
+                core.SetVirtualHostNameToFolderMapping(
+                    "appassets.claudeconsole",
+                    assetDirectory,
+                    CoreWebView2HostResourceAccessKind.DenyCors);
+                core.Settings.AreDevToolsEnabled = Debugger.IsAttached;
+                core.Settings.AreDefaultContextMenusEnabled = Debugger.IsAttached;
+                core.Settings.IsStatusBarEnabled = false;
+                core.Settings.IsZoomControlEnabled = false;
+                core.WebMessageReceived += OnWebMessageReceived;
+                core.ProcessFailed += OnWebProcessFailed;
+                core.NavigationCompleted += OnWebNavigationCompleted;
+                core.Navigate("https://appassets.claudeconsole/index.html");
+            }
+            catch (Exception ex)
+            {
+                ShowNativeShell();
+                Debug.WriteLine($"[WebUI] Initialization failed: {ex}");
+            }
+        }
+
+        private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            try
+            {
+                var response = await _webUiBridge.HandleAsync(e.WebMessageAsJson);
+                WebShellView.CoreWebView2?.PostWebMessageAsJson(
+                    JsonSerializer.Serialize(response, WebJsonOptions));
+
+                using var messageDocument = JsonDocument.Parse(e.WebMessageAsJson);
+                if (messageDocument.RootElement.TryGetProperty("type", out var typeElement) &&
+                    string.Equals(typeElement.GetString(), "app.ready", StringComparison.Ordinal))
+                {
+                    _webShellReady = response.Ok;
+                    if (_webShellReady && _useWebShell)
+                        ShowWebShell();
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowNativeShell();
+                Debug.WriteLine($"[WebUI] Message handling failed: {ex}");
+            }
+        }
+
+        private void OnWebProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
+        {
+            ShowNativeShell();
+            Debug.WriteLine($"[WebUI] Process failed: {e.ProcessFailedKind} {e.Reason}");
+        }
+
+        private void OnWebNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (e.IsSuccess)
+                return;
+
+            ShowNativeShell();
+            Debug.WriteLine($"[WebUI] Navigation failed: {e.WebErrorStatus}");
+        }
+
+        private async Task<Models.DashboardSummary> GetDashboardSummaryAsync()
+        {
+            await _dashboardViewModel.LoadSummaryAsync();
+            return _dashboardViewModel.Summary;
+        }
+
+        private static ThemeSnapshot CreateThemeSnapshot()
+        {
+            var theme = ThemeService.Instance;
+            var accent = theme.ActiveAccentColor;
+            return new ThemeSnapshot(
+                theme.CurrentThemeMode.ToString().ToLowerInvariant(),
+                theme.IsDarkTheme,
+                $"#{accent.R:X2}{accent.G:X2}{accent.B:X2}");
+        }
+
+        private void NavigateFromWeb(MainPanelType panel)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _mainViewModel.Navigate(panel);
+            });
+        }
+
+        private void ShowWebShell()
+        {
+            if (!_webShellReady)
+                return;
+
+            _useWebShell = true;
+            NativeWorkspace.Visibility = Visibility.Collapsed;
+            WebShellHost.Visibility = Visibility.Visible;
+            WebShellView.IsHitTestVisible = true;
+            ShellToggleButton.Content = "原生界面";
+        }
+
+        private void ShowNativeShell()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _useWebShell = false;
+                WebShellView.IsHitTestVisible = false;
+                WebShellHost.Visibility = Visibility.Collapsed;
+                NativeWorkspace.Visibility = Visibility.Visible;
+                ShellToggleButton.Content = "Liquid Glass";
+            });
+        }
+
+        private async Task NotifyWebThemeChangedAsync()
+        {
+            if (!_webShellReady || WebShellView.CoreWebView2 == null)
+                return;
+
+            var theme = CreateThemeSnapshot();
+            WebShellView.DefaultBackgroundColor = theme.IsDark
+                ? System.Drawing.Color.FromArgb(0x07, 0x10, 0x1C)
+                : System.Drawing.Color.FromArgb(0xED, 0xF4, 0xF8);
+            await WebShellView.CoreWebView2.ExecuteScriptAsync(
+                $"window.dispatchEvent(new CustomEvent('claudeconsole:theme', {{ detail: {JsonSerializer.Serialize(theme, WebJsonOptions)} }}));");
+        }
+
+        private void OnShellToggleClick(object sender, RoutedEventArgs e)
+        {
+            if (_useWebShell)
+            {
+                ShowNativeShell();
+                return;
+            }
+
+            _useWebShell = true;
+            if (_webShellReady)
+            {
+                _mainViewModel.Navigate(MainPanelType.Dashboard);
+                ShowWebShell();
+            }
+            else
+            {
+                _ = InitializeWebShellAsync();
+            }
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -367,6 +568,23 @@ namespace ClaudeCodePanel.Windows.Views
                     : new CornerRadius(26);
                 WindowShadow.Visibility = Visibility.Visible;
             }
+        }
+
+        private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            ApplyLayoutProfile(WindowLayoutProfile.ForWidth(e.NewSize.Width));
+        }
+
+        private void ApplyLayoutProfile(WindowLayoutProfile profile)
+        {
+            SidebarColumn.Width = new GridLength(profile.SidebarWidth);
+            SidebarHost.Margin = profile.Mode == WindowLayoutMode.Compact
+                ? new Thickness(0, 0, 10, 0)
+                : new Thickness(0, 0, 16, 0);
+            PageDescriptionText.Visibility = profile.Mode == WindowLayoutMode.Compact
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            SidebarView.SetCompactMode(!profile.ShowNavigationLabels);
         }
     }
 }

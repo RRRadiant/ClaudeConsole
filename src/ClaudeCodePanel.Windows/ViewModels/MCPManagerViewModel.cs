@@ -291,6 +291,9 @@ public partial class MCPManagerViewModel : ObservableObject
     private Task PersistToClaudeJSONAsync()
     {
         var claudePath = _configFileService.ClaudeGlobalConfigPath;
+        var expectedMtime = File.Exists(claudePath)
+            ? File.GetLastWriteTimeUtc(claudePath)
+            : (DateTime?)null;
         // Read existing .claude.json — preserve every key we don't own
         Dictionary<string, JsonElement> rootDict;
         try
@@ -417,7 +420,7 @@ public partial class MCPManagerViewModel : ObservableObject
 
         try
         {
-            _configFileService.WriteJSON(rootDict, claudePath);
+            _configFileService.WriteJSON(rootDict, claudePath, expectedMtime);
             ErrorMessage = null;
         }
         catch (Exception ex)
@@ -434,11 +437,12 @@ public partial class MCPManagerViewModel : ObservableObject
     /// </summary>
     private static Dictionary<string, object> ServerToDictionary(MCPServerConfig server)
     {
-        var dict = new Dictionary<string, object>
-        {
-            ["type"] = server.ServerType == MCPServerType.Sse ? "sse" : "stdio",
-            ["enabled"] = server.Enabled
-        };
+        var dict = server.AdditionalProperties.ToDictionary(
+            static pair => pair.Key,
+            static pair => (object)pair.Value.Clone(),
+            StringComparer.Ordinal);
+        dict["type"] = server.ServerType == MCPServerType.Sse ? "sse" : "stdio";
+        dict["enabled"] = server.Enabled;
 
         if (server.ServerType == MCPServerType.Sse)
         {

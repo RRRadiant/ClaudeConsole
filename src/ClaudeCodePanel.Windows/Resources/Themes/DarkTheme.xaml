@@ -73,12 +73,23 @@
     <SolidColorBrush x:Key="GlassCardBgAltBrush" Color="#08FFFFFF"/>       <!-- card alt -->
     <SolidColorBrush x:Key="GlassCardHoverBrush" Color="#12FFFFFF"/>       <!-- card hover state -->
     <SolidColorBrush x:Key="GlassCardActiveBrush" Color="#06FFFFFF"/>      <!-- card active/pressed state -->
+    <SolidColorBrush x:Key="GlassSubtleBrush" Color="#0DFFFFFF"/>
+    <SolidColorBrush x:Key="GlassInteractiveBrush" Color="#16FFFFFF"/>
+    <SolidColorBrush x:Key="GlassProminentBrush" Color="#1CFFFFFF"/>
+    <SolidColorBrush x:Key="GlassNavigationBrush" Color="#12FFFFFF"/>
+    <SolidColorBrush x:Key="GlassFallbackBrush" Color="#F20C1322"/>
+    <SolidColorBrush x:Key="GlassRimBrush" Color="#24FFFFFF"/>
+    <SolidColorBrush x:Key="GlassRimStrongBrush" Color="#3DFFFFFF"/>
+    <SolidColorBrush x:Key="GlassLowerEdgeBrush" Color="#52000000"/>
+    <SolidColorBrush x:Key="FocusRingBrush" Color="#B86FCBFF"/>
+    <SolidColorBrush x:Key="ContentCanvasBrush" Color="#A8080F1D"/>
 
     <!-- Accent Colors -->
     <SolidColorBrush x:Key="AccentBrush" Color="#6faadd"/>
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#8bbaff"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#1464b4ff"/>         <!-- rgba(100,180,255,0.08) -->
     <SolidColorBrush x:Key="AccentGlowBrush" Color="#4064b4ff"/>          <!-- rgba(100,180,255,0.25) -->
+    <SolidColorBrush x:Key="AccentChromaticBrush" Color="#305BE7E7"/>
     <SolidColorBrush x:Key="TextOnAccentBrush" Color="#ffffff"/>
 
     <!-- Text Colors -->

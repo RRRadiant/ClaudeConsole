@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using ClaudeCodePanel.Windows.Models;
+using ClaudeCodePanel.Windows.Design;
 using ClaudeCodePanel.Windows.Services;
 using ClaudeCodePanel.Windows.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,9 +23,8 @@ public partial class DashboardView : UserControl
     private DashboardViewModel? _vm;
     private bool _subscriptionsAttached;
     private bool _hasAnimatedEvents;
-
-    // Progress bar animation targets (percentage 0-100)
-    private const double ProgressBarMaxWidth = 200; // will be overridden by actual available width
+    private bool _refreshQueued;
+    private string _lastEventsSignature = string.Empty;
 
     public DashboardView()
     {
@@ -83,7 +83,20 @@ public partial class DashboardView : UserControl
 
     private void OnSummaryPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        Dispatcher.Invoke(RefreshSummaryUi);
+        QueueSummaryRefresh();
+    }
+
+    private void QueueSummaryRefresh()
+    {
+        if (_refreshQueued)
+            return;
+
+        _refreshQueued = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _refreshQueued = false;
+            RefreshSummaryUi();
+        }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void OnConfigFileChanged(string path)
@@ -164,7 +177,7 @@ public partial class DashboardView : UserControl
         McpValueText.Text = $"{s.ActiveMCPServersCount}/{s.TotalMCPServersCount}";
     }
 
-    /// <summary>Animates each card's progress bar from 0 to target width (800 ms ease-out).</summary>
+    /// <summary>Uses a short transition from the current width to avoid repeated full animations.</summary>
     private void AnimateProgressBars()
     {
         if (_vm?.Summary == null) return;
@@ -190,15 +203,23 @@ public partial class DashboardView : UserControl
 
         double targetWidth = maxWidth * (percent / 100.0);
 
-        var sb = new Storyboard();
-        var anim = new DoubleAnimation(0, targetWidth, TimeSpan.FromMilliseconds(800))
+        var reduceEffects = UiPerformancePolicy.ShouldReduceEffects(
+            SystemParameters.ClientAreaAnimation == false,
+            SystemParameters.IsRemoteSession,
+            RenderCapability.Tier >> 16);
+
+        bar.BeginAnimation(WidthProperty, null);
+        if (reduceEffects)
+        {
+            bar.Width = targetWidth;
+            return;
+        }
+
+        var anim = new DoubleAnimation(bar.ActualWidth, targetWidth, TimeSpan.FromMilliseconds(180))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
-        Storyboard.SetTarget(anim, bar);
-        Storyboard.SetTargetProperty(anim, new PropertyPath(Rectangle.WidthProperty));
-        sb.Children.Add(anim);
-        sb.Begin();
+        bar.BeginAnimation(WidthProperty, anim, HandoffBehavior.SnapshotAndReplace);
     }
 
     /// <summary>Rebinds the events list and triggers staggered entrance animation.</summary>
@@ -219,7 +240,12 @@ public partial class DashboardView : UserControl
         EventsEmptyState.Visibility = Visibility.Collapsed;
         EventsItemsControl.Visibility = Visibility.Visible;
 
-        // Bind items
+        var signature = string.Join('|', events.Select(static item =>
+            $"{item.Timestamp.Ticks}:{item.Type}:{item.Message}"));
+        if (string.Equals(signature, _lastEventsSignature, StringComparison.Ordinal))
+            return;
+
+        _lastEventsSignature = signature;
         EventsItemsControl.ItemsSource = null;
         EventsItemsControl.ItemsSource = events;
 
@@ -286,23 +312,7 @@ public partial class DashboardView : UserControl
 
             sb.Begin();
 
-            // Apply breathing pulse to the status dot inside this container
-            ApplyBreathingPulse(element);
         }
-    }
-
-    /// <summary>Finds the Ellipse inside an event row and starts a breathing pulse animation.</summary>
-    private static void ApplyBreathingPulse(FrameworkElement container)
-    {
-        var dot = FindVisualChild<Ellipse>(container);
-        if (dot == null) return;
-
-        var sb = new Storyboard { RepeatBehavior = RepeatBehavior.Forever, AutoReverse = true };
-        var pulse = new DoubleAnimation(0.4, 1.0, TimeSpan.FromSeconds(2));
-        Storyboard.SetTarget(pulse, dot);
-        Storyboard.SetTargetProperty(pulse, new PropertyPath(UIElement.OpacityProperty));
-        sb.Children.Add(pulse);
-        sb.Begin();
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject

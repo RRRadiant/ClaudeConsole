@@ -71,6 +71,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private MainPanelType _selectedPanel = MainPanelType.Dashboard;
 
+    public string CurrentPageTitle => SidebarItems.Find(item => item.PanelType == SelectedPanel)?.Title ?? "Claude Console";
+
+    public string CurrentPageDescription => SidebarItems.Find(item => item.PanelType == SelectedPanel)?.Description ?? string.Empty;
+
     // ── Update notification ────────────────────────────────────────
 
     /// <summary>True when a newer version is available on GitHub.</summary>
@@ -112,6 +116,8 @@ public partial class MainViewModel : ObservableObject
     {
         SidebarItems = BuildSidebarItems();
         OnPropertyChanged(nameof(SidebarItems));
+        OnPropertyChanged(nameof(CurrentPageTitle));
+        OnPropertyChanged(nameof(CurrentPageDescription));
     }
 
     private static List<SidebarItem> BuildSidebarItems()
@@ -135,6 +141,8 @@ public partial class MainViewModel : ObservableObject
                 loc["Sidebar.EnvCheck"],     loc["Sidebar.EnvCheckDesc"],     MainPanelType.EnvCheck),
         };
     }
+
+    internal static List<SidebarItem> CreateSidebarItemsForCurrentLanguage() => BuildSidebarItems();
 
     // ── Constructor ────────────────────────────────────────────────
 
@@ -249,5 +257,11 @@ public partial class MainViewModel : ObservableObject
         }
 
         SelectedPanelViewModel = vm;
+    }
+
+    partial void OnSelectedPanelChanged(MainPanelType value)
+    {
+        OnPropertyChanged(nameof(CurrentPageTitle));
+        OnPropertyChanged(nameof(CurrentPageDescription));
     }
 }

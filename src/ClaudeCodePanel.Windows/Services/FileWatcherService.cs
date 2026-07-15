@@ -10,7 +10,8 @@ public sealed class FileWatcherService
 {
     public static FileWatcherService Instance { get; } = new();
 
-    private readonly ConcurrentDictionary<string, WatcherEntry> _entries = new();
+    private readonly ConcurrentDictionary<string, WatcherEntry> _entries =
+        new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Debounce window in milliseconds. Prevents duplicate firings from
     /// FileSystemWatcher raising multiple Changed events per save.</summary>
@@ -19,7 +20,9 @@ public sealed class FileWatcherService
     /// <summary>Fires on the UI thread after a watched file changes (debounced).</summary>
     public event Action<string>? OnChange;
 
-    private FileWatcherService() { }
+    internal int WatchedPathCount => _entries.Count;
+
+    internal FileWatcherService() { }
 
     // ── Public API ──────────────────────────────────────────
 
@@ -27,15 +30,18 @@ public sealed class FileWatcherService
     /// watcher for the same path first.</summary>
     public void Watch(string filePath)
     {
-        StopWatching(filePath);
+        var normalizedPath = Path.GetFullPath(filePath);
+        StopWatching(normalizedPath);
 
-        var directory = Path.GetDirectoryName(filePath);
-        var fileName = Path.GetFileName(filePath);
+        var directory = Path.GetDirectoryName(normalizedPath);
+        var fileName = Path.GetFileName(normalizedPath);
 
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+        if (string.IsNullOrEmpty(directory))
             return;
         if (string.IsNullOrEmpty(fileName))
             return;
+
+        Directory.CreateDirectory(directory);
 
         var fsw = new FileSystemWatcher(directory, fileName)
         {
@@ -45,18 +51,23 @@ public sealed class FileWatcherService
             EnableRaisingEvents = false
         };
 
-        var entry = new WatcherEntry(fsw, filePath, path =>
+        var entry = new WatcherEntry(fsw, normalizedPath, path =>
         {
-            Application.Current?.Dispatcher.Invoke(() => OnChange?.Invoke(path));
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher != null)
+                dispatcher.Invoke(() => OnChange?.Invoke(path));
+            else
+                OnChange?.Invoke(path);
         });
 
-        _entries[filePath] = entry;
+        _entries[normalizedPath] = entry;
     }
 
     /// <summary>Stop watching a single file and release its watcher.</summary>
     public void StopWatching(string filePath)
     {
-        if (_entries.TryRemove(filePath, out var entry))
+        var normalizedPath = Path.GetFullPath(filePath);
+        if (_entries.TryRemove(normalizedPath, out var entry))
         {
             entry.Dispose();
         }

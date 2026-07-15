@@ -75,10 +75,18 @@ public static class MCPDisplayNameStore
                 var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 if (dict != null)
                 {
+                    var migrated = false;
                     foreach (var kvp in dict)
                     {
-                        _displayNames[kvp.Key] = kvp.Value;
+                        var normalizedKey = MCPServerConfig.NormalizePersistentKey(kvp.Key);
+                        _displayNames[normalizedKey] = kvp.Value;
+                        migrated |= !string.Equals(normalizedKey, kvp.Key, StringComparison.Ordinal);
                     }
+
+                    // Rewrite immediately so legacy keys containing arguments or environment
+                    // values do not remain on disk until the user happens to rename a server.
+                    if (migrated)
+                        FlushToDisk();
                 }
             }
         }
@@ -112,15 +120,32 @@ public static class MCPDisplayNameStore
 
     private static void FlushToDisk()
     {
+        string? tempPath = null;
         try
         {
             var snapshot = new Dictionary<string, string>(_displayNames, StringComparer.Ordinal);
             var json = JsonSerializer.Serialize(snapshot, _jsonOptions);
-            File.WriteAllText(_storePath, json);
+            tempPath = $"{_storePath}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _storePath, overwrite: true);
         }
         catch (Exception ex)
         {
             SharedHelpers.SafeLog("MCPDisplayNameStore.FlushToDisk", ex);
+        }
+        finally
+        {
+            if (tempPath != null && File.Exists(tempPath))
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (Exception ex)
+                {
+                    SharedHelpers.SafeLog("MCPDisplayNameStore.FlushToDisk.Cleanup", ex);
+                }
+            }
         }
     }
 }

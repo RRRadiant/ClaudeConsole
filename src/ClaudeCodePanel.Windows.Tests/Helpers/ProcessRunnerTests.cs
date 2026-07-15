@@ -185,6 +185,71 @@ public sealed class ConfigFileServiceWriteJSONTests
     }
 
     [Fact]
+    public void WriteJSON_SettingsLocal_DoesNotRetainSensitiveBackup()
+    {
+        var tempDirectory = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(),
+            $"claude-panel-{Guid.NewGuid():N}");
+        var settingsPath = System.IO.Path.Combine(tempDirectory, "settings.local.json");
+        var backupPath = settingsPath + ".bak";
+
+        try
+        {
+            System.IO.Directory.CreateDirectory(tempDirectory);
+            System.IO.File.WriteAllText(settingsPath, "{\"env\":{\"ANTHROPIC_AUTH_TOKEN\":\"old-secret\"}}");
+            System.IO.File.WriteAllText(backupPath, "old-secret-backup");
+            var service = ConfigFileService.Instance;
+            var dict = new System.Collections.Generic.Dictionary<string, System.Text.Json.JsonElement>
+            {
+                ["env"] = System.Text.Json.JsonSerializer.SerializeToElement(
+                    new System.Collections.Generic.Dictionary<string, string>
+                    {
+                        ["ANTHROPIC_AUTH_TOKEN"] = "new-secret"
+                    })
+            };
+
+            service.WriteJSON(dict, settingsPath);
+
+            Assert.False(System.IO.File.Exists(backupPath));
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(tempDirectory))
+                System.IO.Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WriteJSON_WhenExistingContentContainsSecret_DoesNotCreateBackup()
+    {
+        var tempDirectory = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(),
+            $"claude-panel-{Guid.NewGuid():N}");
+        var settingsPath = System.IO.Path.Combine(tempDirectory, "settings.json");
+
+        try
+        {
+            System.IO.Directory.CreateDirectory(tempDirectory);
+            System.IO.File.WriteAllText(settingsPath, "{\"env\":{\"ANTHROPIC_AUTH_TOKEN\":\"legacy-secret\"}}");
+            var service = ConfigFileService.Instance;
+            var dict = new System.Collections.Generic.Dictionary<string, System.Text.Json.JsonElement>
+            {
+                ["env"] = System.Text.Json.JsonSerializer.SerializeToElement(
+                    new System.Collections.Generic.Dictionary<string, string>())
+            };
+
+            service.WriteJSON(dict, settingsPath);
+
+            Assert.False(System.IO.File.Exists(settingsPath + ".bak"));
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(tempDirectory))
+                System.IO.Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void WriteText_OverwritingExistingFile_CreatesBackup()
     {
         var tempFile = System.IO.Path.GetTempFileName();
@@ -225,5 +290,25 @@ public sealed class ConfigFileServiceWriteJSONTests
             if (System.IO.File.Exists(tempFile))
                 System.IO.File.Delete(tempFile);
         }
+    }
+
+    [Fact]
+    public void WriteJSON_ExpectedExistingFileWasDeleted_ThrowsConflict()
+    {
+        var tempFile = System.IO.Path.GetTempFileName();
+        var expectedMtime = System.IO.File.GetLastWriteTimeUtc(tempFile);
+        System.IO.File.Delete(tempFile);
+
+        var service = ConfigFileService.Instance;
+        var dict = new System.Collections.Generic.Dictionary<string, System.Text.Json.JsonElement>
+        {
+            ["value"] = System.Text.Json.JsonSerializer.SerializeToElement("new")
+        };
+
+        var ex = Assert.Throws<ConfigFileException>(() =>
+            service.WriteJSON(dict, tempFile, expectedMtime));
+
+        Assert.Equal(ConfigFileError.ConflictDetected, ex.Error);
+        Assert.False(System.IO.File.Exists(tempFile));
     }
 }
