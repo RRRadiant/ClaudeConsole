@@ -13,22 +13,22 @@
         <!-- ═══ Row 0 — Header ═══ -->
         <shared:SectionHeader Grid.Row="0" Title="配置文件"
                               Description="选择文件并编辑"
-                              Margin="48,36,48,20"/>
+                              Margin="32,28,32,20"/>
 
         <!-- ═══ Row 1 — File tabs ═══ -->
         <StackPanel Grid.Row="1">
             <ScrollViewer x:Name="FileTabsScroller"
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled"
-                          Margin="48,0,48,0">
+                          Margin="32,0,32,0">
                 <StackPanel x:Name="FileTabsPanel" Orientation="Horizontal"/>
             </ScrollViewer>
-            <shared:GlassDivider Margin="48,10,48,0"/>
+            <shared:GlassDivider Margin="32,10,32,0"/>
         </StackPanel>
 
         <!-- ═══ Row 2 — File info bar ═══ -->
         <StackPanel x:Name="FileInfoBar" Grid.Row="2"
-                    Orientation="Horizontal" Margin="48,14,48,10"
+                    Orientation="Horizontal" Margin="32,14,32,10"
                     Visibility="Collapsed">
             <TextBlock x:Name="FileIcon"
                        FontFamily="Segoe MDL2 Assets" FontSize="14"
@@ -48,7 +48,7 @@
         <!-- ═══ Row 3 — Editor area ═══ -->
         <Grid Grid.Row="3">
             <ScrollViewer x:Name="EditorScroller" Visibility="Collapsed">
-                <StackPanel Margin="48,0,48,24">
+                <StackPanel Margin="32,0,32,24">
 
                     <!-- Code editor -->
                     <Border x:Name="EditorBorder"

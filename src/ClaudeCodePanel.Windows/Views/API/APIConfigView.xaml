@@ -11,9 +11,9 @@
         </LinearGradientBrush>
 
         <Style x:Key="PagePanelStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="{DynamicResource RadiusXl}"/>
-            <Setter Property="Background" Value="{DynamicResource OverlayBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusLg}"/>
+            <Setter Property="Background" Value="{DynamicResource GlassSubtleBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="22"/>
             <Setter Property="Margin" Value="0,0,0,18"/>
@@ -32,8 +32,8 @@
 
         <Style x:Key="SecondaryActionButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="Background" Value="{DynamicResource GlassCardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderDefaultBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource GlassInteractiveBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassRimBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -100,9 +100,8 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="36,28,36,36">
+    <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
+        <StackPanel Margin="32,28" MaxWidth="1280" HorizontalAlignment="Stretch">
             <Grid Margin="0,0,0,18">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

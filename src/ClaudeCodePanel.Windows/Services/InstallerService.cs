@@ -15,7 +15,21 @@ public sealed class InstallerService : IInstallerService
 {
     public static InstallerService Instance { get; } = new();
 
-    private InstallerService() { }
+    private readonly Func<string, string, int, Task<ProcessResult>> _runProcess;
+    private readonly Func<Task<CliStatus>>? _statusProbe;
+
+    private InstallerService()
+        : this(ProcessRunner.RunAsync, statusProbe: null)
+    {
+    }
+
+    internal InstallerService(
+        Func<string, string, int, Task<ProcessResult>> runProcess,
+        Func<Task<CliStatus>>? statusProbe)
+    {
+        _runProcess = runProcess;
+        _statusProbe = statusProbe;
+    }
 
     // ── Public types ───────────────────────────────────────
 
@@ -40,7 +54,7 @@ public sealed class InstallerService : IInstallerService
     /// Find npm's full path — PATH may not be refreshed after install.
     /// Searches 15+ known locations and falls back to PowerShell discovery.
     /// </summary>
-    private static async Task<string> FindNpmAsync()
+    private async Task<string> FindNpmAsync()
     {
         var homedir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -88,9 +102,9 @@ public sealed class InstallerService : IInstallerService
     /// Runs a quick process, drains stdout asynchronously, and returns trimmed output.
     /// Uses cmd.exe /c wrapper for .cmd/.bat files for consistency with RunCommandAsync.
     /// </summary>
-    private static async Task<string?> RunQuickProcessAsync(string fileName, string arguments, int timeoutMs = 5000)
+    private async Task<string?> RunQuickProcessAsync(string fileName, string arguments, int timeoutMs = 5000)
     {
-        var result = await ProcessRunner.RunAsync(fileName, arguments, timeoutMs).ConfigureAwait(false);
+        var result = await _runProcess(fileName, arguments, timeoutMs).ConfigureAwait(false);
         if (result.TimedOut || result.ExitCode != 0)
             return null;
         return string.IsNullOrWhiteSpace(result.Stdout) ? null : result.Stdout;
@@ -98,9 +112,9 @@ public sealed class InstallerService : IInstallerService
 
     // ── Process runner ─────────────────────────────────────
 
-    private static async Task<InstallResult> RunCommandAsync(string fileName, string arguments, int timeoutMs = 180_000)
+    private async Task<InstallResult> RunCommandAsync(string fileName, string arguments, int timeoutMs = 180_000)
     {
-        var result = await ProcessRunner.RunAsync(fileName, arguments, timeoutMs).ConfigureAwait(false);
+        var result = await _runProcess(fileName, arguments, timeoutMs).ConfigureAwait(false);
 
         if (result.TimedOut)
             return new InstallResult { Success = false, Error = "超时" };
@@ -120,33 +134,153 @@ public sealed class InstallerService : IInstallerService
     // ── Claude Code CLI Install ────────────────────────────
 
     private const string ClaudePkg = "@anthropic-ai/claude-code";
+    private const string OfficialNpmRegistry = "https://registry.npmjs.org";
 
     public async Task<InstallResult> InstallCliAsync(InstallMethod method)
     {
+        var statusBeforeInstall = await GetClaudeStatusAsync().ConfigureAwait(false);
+
         if (method == InstallMethod.Npm)
         {
-            var npm = await FindNpmAsync();
-            var officialResult = await RunCommandAsync(npm, $"install -g {ClaudePkg}", AppConstants.TimeoutInstall);
-            if (officialResult.Success)
-                return officialResult;
+            var npm = await FindNpmAsync().ConfigureAwait(false);
+            var preflight = await RunCommandAsync(npm, "--version", 10_000).ConfigureAwait(false);
+            if (!preflight.Success)
+            {
+                return new InstallResult
+                {
+                    Success = false,
+                    Error = $"未检测到可用的 npm: {preflight.Error}"
+                };
+            }
 
-            return await RunCommandAsync(
+            var installResult = await RunCommandAsync(
                 npm,
-                $"install -g {ClaudePkg} {AppConstants.NpmMirror}",
-                AppConstants.TimeoutInstall);
+                $"install -g {ClaudePkg} --registry={OfficialNpmRegistry}",
+                AppConstants.TimeoutInstall).ConfigureAwait(false);
+
+            return await VerifyOrRecoverInstallAsync(
+                method,
+                npm,
+                statusBeforeInstall,
+                installResult).ConfigureAwait(false);
         }
         if (method == InstallMethod.Winget)
-            return await RunCommandAsync("winget", "install Anthropic.ClaudeCode", AppConstants.TimeoutInstall);
+        {
+            var preflight = await RunCommandAsync("winget", "--version", 10_000).ConfigureAwait(false);
+            if (!preflight.Success)
+            {
+                return new InstallResult
+                {
+                    Success = false,
+                    Error = $"未检测到可用的 winget: {preflight.Error}"
+                };
+            }
+
+            var installResult = await RunCommandAsync(
+                "winget",
+                "install --id Anthropic.ClaudeCode --exact --accept-package-agreements " +
+                "--accept-source-agreements --silent",
+                AppConstants.TimeoutInstall).ConfigureAwait(false);
+
+            return await VerifyOrRecoverInstallAsync(
+                method,
+                npmPath: null,
+                statusBeforeInstall,
+                installResult).ConfigureAwait(false);
+        }
 
         return new InstallResult { Success = false, Error = "未知安装方式" };
+    }
+
+    private async Task<InstallResult> VerifyOrRecoverInstallAsync(
+        InstallMethod method,
+        string? npmPath,
+        CliStatus statusBeforeInstall,
+        InstallResult installResult)
+    {
+        if (!installResult.Success)
+        {
+            if (!statusBeforeInstall.Installed)
+                await CleanupPartialInstallAsync(method, npmPath).ConfigureAwait(false);
+
+            return installResult;
+        }
+
+        var statusAfterInstall = await GetClaudeStatusAsync().ConfigureAwait(false);
+        if (statusAfterInstall.Installed)
+            return new InstallResult { Success = true };
+
+        if (!statusBeforeInstall.Installed)
+            await CleanupPartialInstallAsync(method, npmPath).ConfigureAwait(false);
+
+        return new InstallResult
+        {
+            Success = false,
+            Error = "安装命令已完成，但未检测到 Claude Code；已清理本次安装产生的残留。"
+        };
+    }
+
+    private async Task CleanupPartialInstallAsync(InstallMethod method, string? npmPath)
+    {
+        if (method == InstallMethod.Npm && !string.IsNullOrWhiteSpace(npmPath))
+        {
+            await RunCommandAsync(
+                npmPath,
+                $"uninstall -g {ClaudePkg}",
+                AppConstants.TimeoutUninstall).ConfigureAwait(false);
+        }
+        else if (method == InstallMethod.Winget)
+        {
+            await RunCommandAsync(
+                "winget",
+                "uninstall --id Anthropic.ClaudeCode --exact --silent",
+                AppConstants.TimeoutUninstall).ConfigureAwait(false);
+        }
     }
 
     // ── Claude Code CLI Uninstall ──────────────────────────
 
     public async Task<InstallResult> UninstallCliAsync()
     {
-        var npm = await FindNpmAsync();
-        return await RunCommandAsync(npm, $"uninstall -g {ClaudePkg}", AppConstants.TimeoutUninstall);
+        var statusBeforeUninstall = await GetClaudeStatusAsync().ConfigureAwait(false);
+        if (!statusBeforeUninstall.Installed)
+            return new InstallResult { Success = true };
+
+        InstallResult uninstallResult;
+        if (IsWingetInstallation(statusBeforeUninstall.Path))
+        {
+            uninstallResult = await RunCommandAsync(
+                "winget",
+                "uninstall --id Anthropic.ClaudeCode --exact --silent",
+                AppConstants.TimeoutUninstall).ConfigureAwait(false);
+        }
+        else
+        {
+            var npm = await FindNpmAsync().ConfigureAwait(false);
+            uninstallResult = await RunCommandAsync(
+                npm,
+                $"uninstall -g {ClaudePkg}",
+                AppConstants.TimeoutUninstall).ConfigureAwait(false);
+        }
+
+        if (!uninstallResult.Success)
+            return uninstallResult;
+
+        var statusAfterUninstall = await GetClaudeStatusAsync().ConfigureAwait(false);
+        return statusAfterUninstall.Installed
+            ? new InstallResult
+            {
+                Success = false,
+                Error = $"卸载命令已完成，但仍检测到 Claude Code: {statusAfterUninstall.Path ?? "未知路径"}"
+            }
+            : new InstallResult { Success = true };
+    }
+
+    private static bool IsWingetInstallation(string? path)
+    {
+        return !string.IsNullOrWhiteSpace(path) &&
+               (path.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("WinGet", StringComparison.OrdinalIgnoreCase));
     }
 
     // ── Claude Code CLI Status ─────────────────────────────
@@ -156,7 +290,12 @@ public sealed class InstallerService : IInstallerService
     /// known paths, npm global bin directory, and fallback shell.
     /// All process calls are async to avoid deadlocks.
     /// </summary>
-    public async Task<CliStatus> GetClaudeStatusAsync()
+    public Task<CliStatus> GetClaudeStatusAsync()
+    {
+        return _statusProbe?.Invoke() ?? GetClaudeStatusCoreAsync();
+    }
+
+    private async Task<CliStatus> GetClaudeStatusCoreAsync()
     {
         const string binaryName = "claude";
         var homedir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

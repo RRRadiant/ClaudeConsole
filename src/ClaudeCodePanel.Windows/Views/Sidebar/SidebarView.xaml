@@ -64,7 +64,8 @@
                                         </Viewbox>
                                     </Border>
 
-                                    <StackPanel Grid.Column="1"
+                                    <StackPanel x:Name="navTextPanel"
+                                                Grid.Column="1"
                                                 Margin="12,0,0,0"
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Title}"
@@ -161,14 +162,15 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="16">
+    <Grid x:Name="SidebarRoot" Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
+        <Border x:Name="BrandPanel"
+                Grid.Row="0"
                 CornerRadius="{DynamicResource RadiusXl}"
                 Background="{DynamicResource GlassCardBgBrush}"
                 BorderBrush="{DynamicResource BorderDefaultBrush}"
@@ -232,7 +234,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="0,16,0,16">
+        <Grid x:Name="NavigationRegion" Grid.Row="1" Margin="0,16,0,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -240,19 +242,14 @@
 
             <Border Grid.Row="0"
                     CornerRadius="{DynamicResource RadiusXl}"
-                    Background="{DynamicResource GlassCardBgBrush}"
-                    BorderBrush="{DynamicResource BorderDefaultBrush}"
+                    Background="{DynamicResource GlassNavigationBrush}"
+                    BorderBrush="{DynamicResource GlassRimBrush}"
                     BorderThickness="1"
                     Padding="10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <ScrollViewer Grid.Row="0"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer x:Name="NavigationScroller"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
                         <ItemsControl x:Name="ItemsControl"
                                       ItemsSource="{Binding SidebarItems}">
                             <ItemsControl.ItemsPanel>
@@ -270,46 +267,99 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </ScrollViewer>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
 
-                    <Border Grid.Row="1"
-                            Margin="0,14,0,0"
-                            Padding="16"
-                            CornerRadius="{DynamicResource RadiusLg}"
-                            Background="{DynamicResource SurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderDefaultBrush}"
-                            BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock x:Name="AppearanceHeadingText"
-                                       FontSize="11"
+            <StackPanel x:Name="UtilityPanel" Grid.Row="1" Margin="0,14,0,0">
+                <Button x:Name="AppearanceToggleButton"
+                        Style="{StaticResource SidebarUtilityButtonStyle}"
+                        Click="OnAppearanceToggleClick">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="32"
+                                Height="32"
+                                CornerRadius="{DynamicResource RadiusSm}"
+                                Background="{DynamicResource AccentSubtleBrush}"
+                                BorderBrush="{DynamicResource BorderAccentBrush}"
+                                BorderThickness="1">
+                            <TextBlock Text="&#xE790;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="AppearanceToggleLabelText"
+                                       FontSize="12"
                                        FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextTertiaryBrush}"/>
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock x:Name="AppearanceToggleHintText"
+                                       Text="主题与强调色"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
 
-                            <primitives:UniformGrid Columns="2" Margin="0,12,0,0">
-                                <Button x:Name="ThemeModeSystemButton"
-                                        Style="{StaticResource AppearanceModeButtonStyle}"
-                                        Tag="System"
-                                        Click="OnThemeModeClick"/>
-                                <Button x:Name="ThemeModeLightButton"
-                                        Style="{StaticResource AppearanceModeButtonStyle}"
-                                        Tag="Light"
-                                        Click="OnThemeModeClick"/>
-                                <Button x:Name="ThemeModeDarkButton"
-                                        Style="{StaticResource AppearanceModeButtonStyle}"
-                                        Tag="Dark"
-                                        Click="OnThemeModeClick"/>
-                                <Button x:Name="ThemeModeCustomButton"
-                                        Style="{StaticResource AppearanceModeButtonStyle}"
-                                        Tag="Custom"
-                                        Click="OnThemeModeClick"/>
-                            </primitives:UniformGrid>
+                        <TextBlock x:Name="AppearanceToggleChevron"
+                                   Grid.Column="2"
+                                   Text="&#xE70D;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Button>
 
-                            <Border Margin="0,8,0,0"
-                                    Padding="12"
-                                    CornerRadius="{DynamicResource RadiusMd}"
-                                    Background="{DynamicResource GlassCardBgBrush}"
-                                    BorderBrush="{DynamicResource BorderDefaultBrush}"
-                                    BorderThickness="1">
+                <Border x:Name="AppearancePanel"
+                        Margin="0,8,0,0"
+                        Padding="14"
+                        CornerRadius="{DynamicResource RadiusLg}"
+                        Background="{DynamicResource GlassSubtleBrush}"
+                        BorderBrush="{DynamicResource GlassRimBrush}"
+                        BorderThickness="1"
+                        Visibility="Collapsed"
+                        ClipToBounds="True">
+                    <StackPanel>
+                        <TextBlock x:Name="AppearanceHeadingText"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"/>
+
+                        <primitives:UniformGrid Columns="2" Margin="0,10,0,0">
+                            <Button x:Name="ThemeModeSystemButton"
+                                    Style="{StaticResource AppearanceModeButtonStyle}"
+                                    Tag="System"
+                                    Click="OnThemeModeClick"/>
+                            <Button x:Name="ThemeModeLightButton"
+                                    Style="{StaticResource AppearanceModeButtonStyle}"
+                                    Tag="Light"
+                                    Click="OnThemeModeClick"/>
+                            <Button x:Name="ThemeModeDarkButton"
+                                    Style="{StaticResource AppearanceModeButtonStyle}"
+                                    Tag="Dark"
+                                    Click="OnThemeModeClick"/>
+                            <Button x:Name="ThemeModeCustomButton"
+                                    Style="{StaticResource AppearanceModeButtonStyle}"
+                                    Tag="Custom"
+                                    Click="OnThemeModeClick"/>
+                        </primitives:UniformGrid>
+
+                        <Border Margin="0,6,0,0"
+                                Padding="12"
+                                CornerRadius="{DynamicResource RadiusMd}"
+                                Background="{DynamicResource GlassCardBgBrush}"
+                                BorderBrush="{DynamicResource BorderDefaultBrush}"
+                                BorderThickness="1"
+                                ClipToBounds="True">
+                            <StackPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -329,36 +379,34 @@
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         <TextBlock x:Name="AccentHintText"
-                                                   FontSize="11"
+                                                   FontSize="10"
                                                    Foreground="{DynamicResource TextTertiaryBrush}"
-                                                   Margin="0,3,0,0"
+                                                   Margin="0,3,8,0"
                                                    TextWrapping="Wrap"/>
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="2"
-                                                VerticalAlignment="Center"
-                                                Margin="10,0,0,0">
-                                        <TextBlock x:Name="AccentHexText"
-                                                   FontSize="11"
-                                                   HorizontalAlignment="Right"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <Button x:Name="PickAccentButton"
-                                                Style="{StaticResource SidebarUtilityButtonStyle}"
-                                                Margin="0,8,0,0"
-                                                Padding="10,6"
-                                                Click="OnPickAccentClick"/>
-                                    </StackPanel>
+                                    <TextBlock x:Name="AccentHexText"
+                                               Grid.Column="2"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               VerticalAlignment="Top"
+                                               Margin="8,3,0,0"/>
                                 </Grid>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Border>
 
-            <StackPanel Grid.Row="1" Margin="0,14,0,0">
+                                <Button x:Name="PickAccentButton"
+                                        Style="{StaticResource SidebarUtilityButtonStyle}"
+                                        HorizontalContentAlignment="Center"
+                                        Margin="0,10,0,0"
+                                        Padding="10,7"
+                                        Click="OnPickAccentClick"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
                 <Button x:Name="LangToggleButton"
                         Style="{StaticResource SidebarUtilityButtonStyle}"
-                        Margin="0,10,0,0"
+                        Margin="0,8,0,0"
                         Click="OnLanguageToggleClick">
                     <Grid>
                         <Grid.ColumnDefinitions>

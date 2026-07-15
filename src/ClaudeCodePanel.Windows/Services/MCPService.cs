@@ -54,12 +54,7 @@ public sealed class MCPService : IMCPService
         {
             using var response = await HttpClientFactory.Create().SendAsync(request, cts.Token).ConfigureAwait(false);
             var statusCode = (int)response.StatusCode;
-
-            // SSE endpoints often return 4xx for GET (no session), but the server IS reachable
-            if (statusCode is >= 200 and <= 499)
-                return MCPConnectionResult.Success($"服务器可达 (HTTP {statusCode})");
-
-            return MCPConnectionResult.Success("服务器可达");
+            return ClassifySseStatusCode(statusCode);
         }
         catch (OperationCanceledException)
         {
@@ -125,19 +120,17 @@ public sealed class MCPService : IMCPService
             if (completed == delayTask)
             {
                 try { process.Kill(entireProcessTree: true); } catch (Exception ex) { SharedHelpers.SafeLog("MCPService.TestStdioConnectionAsync.Kill", ex); }
-                return MCPConnectionResult.Success("命令可执行 (超时终止)");
+                return ClassifyStdioProcessResult(new ProcessResult(-1, "", "", TimedOut: true));
             }
 
             await exitTask.ConfigureAwait(false);
+            var stdoutOutput = (await stdoutTask.ConfigureAwait(false)).Trim();
             var stderrOutput = (await stderrTask.ConfigureAwait(false)).Trim();
-
-            if (process.ExitCode == 0 || process.ExitCode == 1)
-                return MCPConnectionResult.Success("命令可执行");
-
-            var errMsg = stderrOutput;
-            if (string.IsNullOrEmpty(errMsg))
-                errMsg = $"退出码 {process.ExitCode}";
-            return MCPConnectionResult.Failure(errMsg);
+            return ClassifyStdioProcessResult(new ProcessResult(
+                process.ExitCode,
+                stdoutOutput,
+                stderrOutput,
+                TimedOut: false));
         }
         catch (Exception ex)
         {
@@ -147,5 +140,30 @@ public sealed class MCPService : IMCPService
         {
             process.Dispose();
         }
+    }
+
+    internal static MCPConnectionResult ClassifySseStatusCode(int statusCode)
+    {
+        // Authentication/session errors still prove that the endpoint is reachable.
+        if (statusCode is >= 200 and <= 499)
+            return MCPConnectionResult.Success($"服务器可达 (HTTP {statusCode})");
+
+        return MCPConnectionResult.Failure($"服务器响应异常 (HTTP {statusCode})");
+    }
+
+    internal static MCPConnectionResult ClassifyStdioProcessResult(ProcessResult result)
+    {
+        if (result.TimedOut)
+            return MCPConnectionResult.Failure("命令测试超时 (8s)");
+
+        if (result.ExitCode is 0 or 1)
+            return MCPConnectionResult.Success("命令可执行");
+
+        var error = !string.IsNullOrWhiteSpace(result.Stderr)
+            ? result.Stderr.Trim()
+            : (!string.IsNullOrWhiteSpace(result.Stdout)
+                ? result.Stdout.Trim()
+                : $"退出码 {result.ExitCode}");
+        return MCPConnectionResult.Failure(error);
     }
 }

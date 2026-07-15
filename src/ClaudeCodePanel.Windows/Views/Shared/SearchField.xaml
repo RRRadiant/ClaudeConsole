@@ -4,7 +4,7 @@
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared">
 
     <Border x:Name="RootBorder"
-            CornerRadius="{DynamicResource RadiusMd}"
+            CornerRadius="{DynamicResource RadiusSm}"
             ClipToBounds="False">
 
         <Border.Effect>
@@ -16,7 +16,7 @@
         </Border.Effect>
 
         <Border x:Name="StrokeBorder"
-                CornerRadius="{DynamicResource RadiusMd}"
+                CornerRadius="{DynamicResource RadiusSm}"
                 BorderThickness="1"
                 Background="{DynamicResource InputBackgroundBrush}"
                 ClipToBounds="True">
@@ -51,6 +51,7 @@
                                Visibility="Collapsed"/>
 
                     <TextBox x:Name="InputTextBox"
+                             FocusVisualStyle="{StaticResource KeyboardFocusVisualStyle}"
                              Background="Transparent"
                              Foreground="{DynamicResource TextPrimaryBrush}"
                              CaretBrush="{DynamicResource AccentBrush}"

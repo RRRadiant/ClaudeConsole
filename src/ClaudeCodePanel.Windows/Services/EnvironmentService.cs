@@ -17,7 +17,21 @@ public sealed class EnvironmentService : IEnvironmentService
 {
     public static EnvironmentService Instance { get; } = new();
 
-    private EnvironmentService() { }
+    private readonly Func<string, string, int, Task<ProcessResult>> _runProcess;
+    private readonly Func<string, bool> _fileExists;
+
+    private EnvironmentService()
+        : this(ProcessRunner.RunAsync, File.Exists)
+    {
+    }
+
+    internal EnvironmentService(
+        Func<string, string, int, Task<ProcessResult>> runProcess,
+        Func<string, bool> fileExists)
+    {
+        _runProcess = runProcess;
+        _fileExists = fileExists;
+    }
 
     // ── Public model ───────────────────────────────────────
 
@@ -46,10 +60,10 @@ public sealed class EnvironmentService : IEnvironmentService
     /// Uses cmd.exe /c wrapper for .cmd/.bat files to ensure reliable execution across
     /// Windows versions, matching the proven pattern in InstallerService.RunCommandAsync.
     /// </summary>
-    private static async Task<(int exitCode, string stdout, string stderr)> RunProcessAsync(
+    private async Task<(int exitCode, string stdout, string stderr)> RunProcessAsync(
         string fileName, string arguments, int timeoutMs = 5000)
     {
-        var result = await ProcessRunner.RunAsync(fileName, arguments, timeoutMs).ConfigureAwait(false);
+        var result = await _runProcess(fileName, arguments, timeoutMs).ConfigureAwait(false);
         return (result.ExitCode, result.Stdout, result.Stderr);
     }
 
@@ -58,7 +72,7 @@ public sealed class EnvironmentService : IEnvironmentService
     /// Falls back to .cmd/.exe variants when 'where' returns a path without extension
     /// (common for npm/node on some Windows installations).
     /// </summary>
-    private static async Task<string?> FindInPathAsync(string cmd)
+    private async Task<string?> FindInPathAsync(string cmd)
     {
         // Primary: 'where cmd'
         var (exitCode, stdout, _) = await RunProcessAsync("where", cmd);
@@ -67,14 +81,14 @@ public sealed class EnvironmentService : IEnvironmentService
             var path = stdout.Split('\n')[0].Trim();
 
             // Direct match
-            if (File.Exists(path))
+            if (_fileExists(path))
                 return path;
 
             // 'where npm' sometimes returns the bare name on some systems;
             // try .cmd / .exe variants
             foreach (var ext in new[] { ".cmd", ".exe" })
             {
-                if (File.Exists(path + ext))
+                if (_fileExists(path + ext))
                     return path + ext;
             }
         }
@@ -84,109 +98,79 @@ public sealed class EnvironmentService : IEnvironmentService
         if (exitCode2 == 0 && !string.IsNullOrWhiteSpace(stdout2))
         {
             var path = stdout2.Split('\n')[0].Trim();
-            if (File.Exists(path))
+            if (_fileExists(path))
                 return path;
         }
 
         return null;
     }
 
-    // ── Command detection ──────────────────────────────────
-
-    /// <summary>
-    /// Check if a command exists by trying 'where', then searching
-    /// common installation directories with .cmd/.exe variants.
-    /// </summary>
-    private static async Task<bool> HasCmdAsync(string cmd)
+    private async Task<(bool installed, string? version)> ProbeCommandAsync(
+        string command,
+        IEnumerable<string> fallbackPaths)
     {
-        // 1. PATH search via 'where'
-        var pathFromWhere = await FindInPathAsync(cmd);
-        if (!string.IsNullOrEmpty(pathFromWhere) && File.Exists(pathFromWhere))
+        var path = await FindInPathAsync(command).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(path))
         {
-            var (exitCode, _, _) = await RunProcessAsync(pathFromWhere, "--version");
-            if (exitCode == 0) return true;
-        }
-
-        // 2. Search common install directories
-        var homedir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-
-        var dirs = new[]
-        {
-            Path.Combine(localAppData, "Programs", "nodejs"),
-            Path.Combine(homedir, ".npm-global", "bin"),
-            Path.Combine(appData, "npm"),
-            Path.Combine(programFiles, "nodejs"),
-            @"C:\Program Files\nodejs",
-            @"C:\Program Files (x86)\nodejs",
-        };
-
-        foreach (var dir in dirs)
-        {
-            foreach (var ext in new[] { ".cmd", ".exe", "" })
+            var result = await RunProcessAsync(path, "--version").ConfigureAwait(false);
+            if (result.exitCode == 0)
             {
-                var fullPath = Path.Combine(dir, $"{cmd}{ext}");
-                if (File.Exists(fullPath))
-                {
-                    var (exitCode, _, _) = await RunProcessAsync(fullPath, "--version");
-                    if (exitCode == 0) return true;
-                }
+                return (true,
+                    string.IsNullOrWhiteSpace(result.stdout) ? null : result.stdout);
             }
         }
 
-        return false;
+        foreach (var fallbackPath in fallbackPaths.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!_fileExists(fallbackPath))
+                continue;
+
+            var result = await RunProcessAsync(fallbackPath, "--version").ConfigureAwait(false);
+            if (result.exitCode == 0)
+            {
+                return (true,
+                    string.IsNullOrWhiteSpace(result.stdout) ? null : result.stdout);
+            }
+        }
+
+        return (false, null);
     }
 
-    /// <summary>
-    /// Get the installed version of a command, or null if not found.
-    /// </summary>
-    private static async Task<string?> GetCmdVersionAsync(string cmd)
+    private static IEnumerable<string> GetCommandFallbackPaths(string command)
     {
-        var foundPath = await FindInPathAsync(cmd);
-        if (string.IsNullOrEmpty(foundPath) || !File.Exists(foundPath))
-            return null;
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var directories = new[]
+        {
+            Path.Combine(localAppData, "Programs", "nodejs"),
+            Path.Combine(home, ".npm-global", "bin"),
+            Path.Combine(appData, "npm"),
+            Path.Combine(programFiles, "nodejs"),
+            @"C:\Program Files\nodejs",
+            @"C:\Program Files (x86)\nodejs"
+        };
 
-        var (exitCode, stdout, _) = await RunProcessAsync(foundPath, "--version");
-        return (exitCode == 0 && !string.IsNullOrWhiteSpace(stdout)) ? stdout : null;
+        return directories.SelectMany(directory => new[]
+        {
+            Path.Combine(directory, $"{command}.cmd"),
+            Path.Combine(directory, $"{command}.exe"),
+            Path.Combine(directory, command)
+        });
     }
 
-    // ── Git-specific detection ─────────────────────────────
-
-    private static async Task<bool> HasGitAsync()
+    private static string[] GetGitFallbackPaths()
     {
-        // 1. PATH search
-        if (!string.IsNullOrEmpty(await FindInPathAsync("git")))
-            return true;
-
-        // 2. Common Git directories
-        var homedir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var gitDirs = new[]
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return new[]
         {
             @"C:\Git\bin\git.exe",
             @"C:\Git\cmd\git.exe",
             @"C:\Program Files\Git\bin\git.exe",
             @"C:\Program Files (x86)\Git\bin\git.exe",
-            Path.Combine(homedir, "AppData", "Local", "Programs", "Git", "bin", "git.exe"),
+            Path.Combine(home, "AppData", "Local", "Programs", "Git", "bin", "git.exe")
         };
-
-        foreach (var gitPath in gitDirs)
-        {
-            if (File.Exists(gitPath))
-            {
-                var (exitCode, _, _) = await RunProcessAsync(gitPath, "--version");
-                if (exitCode == 0) return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static async Task<string?> GetGitVersionAsync()
-    {
-        var (exitCode, stdout, _) = await RunProcessAsync("git", "--version");
-        return (exitCode == 0 && !string.IsNullOrWhiteSpace(stdout)) ? stdout : null;
     }
 
     // ── Public API ─────────────────────────────────────────
@@ -196,31 +180,36 @@ public sealed class EnvironmentService : IEnvironmentService
     /// </summary>
     public async Task<List<DepCheckResult>> CheckAllDepsAsync()
     {
-        var nodeInstalled = await HasCmdAsync("node");
-        var npmInstalled = await HasCmdAsync("npm");
-        var gitInstalled = await HasGitAsync();
+        var nodeTask = ProbeCommandAsync("node", GetCommandFallbackPaths("node"));
+        var npmTask = ProbeCommandAsync("npm", GetCommandFallbackPaths("npm"));
+        var gitTask = ProbeCommandAsync("git", GetGitFallbackPaths());
+        await Task.WhenAll(nodeTask, npmTask, gitTask).ConfigureAwait(false);
+
+        var node = await nodeTask.ConfigureAwait(false);
+        var npm = await npmTask.ConfigureAwait(false);
+        var git = await gitTask.ConfigureAwait(false);
 
         var results = new List<DepCheckResult>
         {
             new(
                 name: "node",
                 description: "Node.js",
-                installed: nodeInstalled,
-                version: nodeInstalled ? await GetCmdVersionAsync("node") : null,
+                installed: node.installed,
+                version: node.version,
                 downloadUrl: "https://nodejs.org/en/download"
             ),
             new(
                 name: "npm",
                 description: "npm",
-                installed: npmInstalled,
-                version: npmInstalled ? await GetCmdVersionAsync("npm") : null,
+                installed: npm.installed,
+                version: npm.version,
                 downloadUrl: string.Empty
             ),
             new(
                 name: "git",
                 description: "Git",
-                installed: gitInstalled,
-                version: gitInstalled ? await GetGitVersionAsync() : null,
+                installed: git.installed,
+                version: git.version,
                 downloadUrl: "https://git-scm.com/download/win"
             ),
         };

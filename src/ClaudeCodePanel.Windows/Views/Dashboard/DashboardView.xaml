@@ -71,16 +71,16 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer>
-        <StackPanel Margin="48,36">
+    <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
+        <StackPanel Margin="32,28" MaxWidth="1460" HorizontalAlignment="Stretch">
 
             <!-- ═══ Section Header ═══ -->
             <shared:SectionHeader Title="仪表盘"
                                   Description="概览 Claude Code 环境状态"
-                                  Margin="0,0,0,32"/>
+                                  Margin="0,0,0,24"/>
 
             <!-- ═══ 2×2 Card Grid ═══ -->
-            <Grid Margin="0,0,0,32">
+            <Grid Margin="0,0,0,28">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
@@ -91,7 +91,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- ── Card 1: Claude CLI ── -->
-                <shared:GlassCard Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                <shared:GlassCard Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" Variant="Dashboard">
                     <Grid Margin="20,16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -137,16 +137,12 @@
                                    Fill="{DynamicResource AccentBrush}"
                                    HorizontalAlignment="Left"
                                    Width="0"
-                                   Margin="0,12,0,0">
-                            <Rectangle.Clip>
-                                <RectangleGeometry Rect="0,0,0,3"/>
-                            </Rectangle.Clip>
-                        </Rectangle>
+                                   Margin="0,12,0,0"/>
                     </Grid>
                 </shared:GlassCard>
 
                 <!-- ── Card 2: API ── -->
-                <shared:GlassCard Grid.Row="0" Grid.Column="1" Margin="8,0,0,8">
+                <shared:GlassCard Grid.Row="0" Grid.Column="1" Margin="8,0,0,8" Variant="Dashboard">
                     <Grid Margin="20,16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -193,7 +189,7 @@
                 </shared:GlassCard>
 
                 <!-- ── Card 3: Skills ── -->
-                <shared:GlassCard Grid.Row="1" Grid.Column="0" Margin="0,8,8,0">
+                <shared:GlassCard Grid.Row="1" Grid.Column="0" Margin="0,8,8,0" Variant="Dashboard">
                     <Grid Margin="20,16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -240,7 +236,7 @@
                 </shared:GlassCard>
 
                 <!-- ── Card 4: MCP Servers ── -->
-                <shared:GlassCard Grid.Row="1" Grid.Column="1" Margin="8,8,0,0">
+                <shared:GlassCard Grid.Row="1" Grid.Column="1" Margin="8,8,0,0" Variant="Dashboard">
                     <Grid Margin="20,16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

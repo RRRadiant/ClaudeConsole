@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using ClaudeCodePanel.Windows.Design;
 
 namespace ClaudeCodePanel.Windows.Views.Shared
 {
@@ -437,6 +438,7 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         /// </summary>
         private void CreateRipple(Point clickPosition)
         {
+            if (ShouldReduceEffects()) return;
             var variant = Variant ?? "Primary";
 
             // Determine ripple fill based on variant
@@ -511,6 +513,13 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         {
             if (PressScale == null) return;
 
+            if (ShouldReduceEffects())
+            {
+                PressScale.ScaleX = targetScale;
+                PressScale.ScaleY = targetScale;
+                return;
+            }
+
             PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
 
@@ -529,6 +538,13 @@ namespace ClaudeCodePanel.Windows.Views.Shared
         {
             if (PressScale == null) return;
 
+            if (ShouldReduceEffects())
+            {
+                PressScale.ScaleX = 1;
+                PressScale.ScaleY = 1;
+                return;
+            }
+
             PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
 
@@ -540,6 +556,14 @@ namespace ClaudeCodePanel.Windows.Views.Shared
 
             PressScale.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
             PressScale.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
+        }
+
+        private static bool ShouldReduceEffects()
+        {
+            var reduceMotion = SystemParameters.ClientAreaAnimation == false;
+            var remoteSession = SystemParameters.IsRemoteSession;
+            var renderTier = RenderCapability.Tier >> 16;
+            return UiPerformancePolicy.ShouldReduceEffects(reduceMotion, remoteSession, renderTier);
         }
     }
 }

@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared"
-             Background="{DynamicResource ContentBackgroundBrush}">
+             Background="Transparent">
 
     <UserControl.Resources>
         <Style x:Key="StatusDotStyle" TargetType="Ellipse">
@@ -15,7 +15,7 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="32,28" MaxWidth="720">
+        <Grid Margin="32,28" MaxWidth="860">
             <StackPanel>
 
                 <StackPanel Margin="0,0,0,24">
@@ -34,8 +34,8 @@
 
                         <!-- Status -->
                         <Border CornerRadius="{DynamicResource RadiusSm}"
-                                Background="{DynamicResource GlassCardBgBrush}"
-                                BorderBrush="{DynamicResource BorderCardBrush}"
+                                Background="{DynamicResource GlassSubtleBrush}"
+                                BorderBrush="{DynamicResource GlassRimBrush}"
                                 BorderThickness="1"
                                 Padding="16,12"
                                 Margin="0,0,0,20">

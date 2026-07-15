@@ -4,8 +4,8 @@
              xmlns:shared="clr-namespace:ClaudeCodePanel.Windows.Views.Shared"
              xmlns:mcp="clr-namespace:ClaudeCodePanel.Windows.Views.MCP">
 
-    <ScrollViewer>
-        <StackPanel Margin="48,36" HorizontalAlignment="Stretch">
+    <ScrollViewer Style="{StaticResource PageScrollViewerStyle}">
+        <StackPanel Margin="32,28" MaxWidth="1280" HorizontalAlignment="Stretch">
 
             <!-- ═══ Header ═══ -->
             <Grid Margin="0,0,0,24">

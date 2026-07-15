@@ -58,12 +58,23 @@
     <SolidColorBrush x:Key="GlassCardBgAltBrush" Color="#f3f4f6"/>
     <SolidColorBrush x:Key="GlassCardHoverBrush" Color="#f1f3f5"/>
     <SolidColorBrush x:Key="GlassCardActiveBrush" Color="#e9ecef"/>
+    <SolidColorBrush x:Key="GlassSubtleBrush" Color="#B8FFFFFF"/>
+    <SolidColorBrush x:Key="GlassInteractiveBrush" Color="#D1FFFFFF"/>
+    <SolidColorBrush x:Key="GlassProminentBrush" Color="#E6FFFFFF"/>
+    <SolidColorBrush x:Key="GlassNavigationBrush" Color="#C7FFFFFF"/>
+    <SolidColorBrush x:Key="GlassFallbackBrush" Color="#FAFFFFFF"/>
+    <SolidColorBrush x:Key="GlassRimBrush" Color="#AFFFFFFF"/>
+    <SolidColorBrush x:Key="GlassRimStrongBrush" Color="#E6FFFFFF"/>
+    <SolidColorBrush x:Key="GlassLowerEdgeBrush" Color="#1F5B6B7A"/>
+    <SolidColorBrush x:Key="FocusRingBrush" Color="#B82563EB"/>
+    <SolidColorBrush x:Key="ContentCanvasBrush" Color="#E8FFFFFF"/>
 
     <!-- Accent Colors -->
     <SolidColorBrush x:Key="AccentBrush" Color="#2563eb"/>
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#3b82f6"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="#1adbeafe"/>
     <SolidColorBrush x:Key="AccentGlowBrush" Color="#26dbeafe"/>
+    <SolidColorBrush x:Key="AccentChromaticBrush" Color="#2649B7C7"/>
     <SolidColorBrush x:Key="TextOnAccentBrush" Color="#ffffff"/>
 
     <!-- Text Colors -->

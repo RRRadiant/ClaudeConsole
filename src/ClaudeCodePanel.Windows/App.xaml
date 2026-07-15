@@ -9,6 +9,7 @@
                 <!-- Infrastructure: ViewModel→View DataTemplates (never unloaded) -->
                 <ResourceDictionary Source="Resources/Themes/ViewDataTemplates.xaml"/>
                 <ResourceDictionary Source="Resources/Themes/ScrollBarStyles.xaml"/>
+                <ResourceDictionary Source="Resources/Themes/DesignSystem.xaml"/>
                 <!-- Shared control styles (never unloaded) -->
                 <ResourceDictionary Source="Views/Shared/GlassCard.xaml"/>
                 <ResourceDictionary Source="Views/Shared/UtilityViews.xaml"/>

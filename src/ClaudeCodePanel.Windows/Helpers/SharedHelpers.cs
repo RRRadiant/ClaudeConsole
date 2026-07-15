@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace ClaudeCodePanel.Windows.Helpers;
 
@@ -11,6 +13,21 @@ namespace ClaudeCodePanel.Windows.Helpers;
 /// </summary>
 public static class SharedHelpers
 {
+    private const long MaxLogBytes = 1024 * 1024;
+    private static readonly object LogLock = new();
+    private static readonly Regex UrlUserInfoRegex = new(
+        @"(?i)(https?://)[^/\s@]+@",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex BearerTokenRegex = new(
+        @"(?i)(\bBearer\s+)[^\s,;]+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex SecretAssignmentRegex = new(
+        @"(?i)((?:anthropic_auth_token|api[_-]?key|access[_-]?token|password|secret)\s*[:=]\s*[""']?)[^""'\s,;\}\]]+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex AnthropicKeyRegex = new(
+        @"\bsk-[A-Za-z0-9_-]{8,}",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     /// <summary>
     /// Converts a dash-separated id into a title-cased display name.
     /// E.g. "my-awesome-skill" becomes "My Awesome Skill".
@@ -57,12 +74,51 @@ public static class SharedHelpers
     }
 
     /// <summary>
-    /// Conditionally logs to Debug.WriteLine — only compiled in DEBUG builds.
-    /// Format: "[context] message"
+    /// Writes a redacted diagnostic entry to Debug output and a bounded local log file.
+    /// Format: "timestamp [context] message".
     /// </summary>
-    [Conditional("DEBUG")]
     public static void SafeLog(string context, Exception? ex = null, string? message = null)
     {
-        Debug.WriteLine($"[{context}] {message ?? ex?.Message}");
+        var sanitizedContext = RedactSensitiveText(context);
+        var sanitizedMessage = RedactSensitiveText(message ?? ex?.Message ?? "Unknown error");
+        var entry = $"{DateTimeOffset.UtcNow:O} [{sanitizedContext}] {sanitizedMessage}";
+        Debug.WriteLine(entry);
+
+        try
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var logPath = Path.Combine(localAppData, "ClaudeCodePanel", "logs", "app.log");
+            AppendLogEntry(logPath, entry, MaxLogBytes);
+        }
+        catch (Exception logException)
+        {
+            Debug.WriteLine($"[SharedHelpers.SafeLog] Logging failed: {logException.Message}");
+        }
+    }
+
+    internal static string RedactSensitiveText(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        var redacted = UrlUserInfoRegex.Replace(value, "$1[REDACTED]@");
+        redacted = BearerTokenRegex.Replace(redacted, "$1[REDACTED]");
+        redacted = SecretAssignmentRegex.Replace(redacted, "$1[REDACTED]");
+        return AnthropicKeyRegex.Replace(redacted, "sk-[REDACTED]");
+    }
+
+    internal static void AppendLogEntry(string logPath, string entry, long maxBytes)
+    {
+        lock (LogLock)
+        {
+            var directory = Path.GetDirectoryName(logPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            if (File.Exists(logPath) && new FileInfo(logPath).Length >= maxBytes)
+                File.Move(logPath, logPath + ".1", overwrite: true);
+
+            File.AppendAllText(logPath, entry + Environment.NewLine);
+        }
     }
 }

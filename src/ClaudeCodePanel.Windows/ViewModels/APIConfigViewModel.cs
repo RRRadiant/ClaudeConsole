@@ -194,6 +194,9 @@ public partial class APIConfigViewModel : ObservableObject
     [RelayCommand]
     public void LoadConfig()
     {
+        ApiKey = "";
+        IsKeySaved = false;
+
         // ── 1. PRIMARY: SyncService (reads env vars from settings.json + settings.local.json) ──
         var synced = _syncService.SyncAll();
         if (synced.DidSync)
@@ -209,8 +212,6 @@ public partial class APIConfigViewModel : ObservableObject
                 else
                     EnabledModels.UnionWith(synced.EnabledModels);
             }
-            if (!string.IsNullOrEmpty(synced.ApiKey))
-                ApiKey = synced.ApiKey;
         }
         AvailableModels = SelectedProvider.DefaultModels().ToList();
 
@@ -263,26 +264,38 @@ public partial class APIConfigViewModel : ObservableObject
         }
 
         // ── 3. Read API key from CredentialService (secure storage) ──
-        if (_credentialService.TryRead(SelectedProvider.CredentialKey(), out var key))
+        var credentialKey = SelectedProvider.CredentialKey();
+        var credentialLoaded = false;
+        try
         {
-            if (!string.IsNullOrEmpty(key))
+            if (_credentialService.TryRead(credentialKey, out var key) &&
+                !string.IsNullOrEmpty(key))
             {
                 ApiKey = key;
+                credentialLoaded = true;
             }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[APIConfigViewModel] LoadConfig credential read failed: {ex.Message}");
         }
 
         // Persist SyncService API key to Credential Manager (one-time migration)
-        if (string.IsNullOrEmpty(ApiKey) && !string.IsNullOrEmpty(synced.ApiKey))
+        if (!credentialLoaded && !string.IsNullOrEmpty(synced.ApiKey))
         {
             ApiKey = synced.ApiKey;
-            try { _credentialService.Save(SelectedProvider.CredentialKey(), synced.ApiKey); }
+            try
+            {
+                _credentialService.Save(credentialKey, synced.ApiKey);
+                credentialLoaded = true;
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[APIConfigViewModel] LoadConfig credential save migration failed: {ex.Message}");
             }
         }
 
-        IsKeySaved = !string.IsNullOrEmpty(ApiKey);
+        IsKeySaved = credentialLoaded;
     }
 
     /// <summary>
@@ -294,10 +307,13 @@ public partial class APIConfigViewModel : ObservableObject
     {
         try
         {
+            IsKeySaved = false;
+
             // ── 1. Save / delete API key in Credential Manager ──
             if (!string.IsNullOrEmpty(ApiKey))
             {
                 _credentialService.Save(SelectedProvider.CredentialKey(), ApiKey);
+                IsKeySaved = true;
             }
             else
             {
@@ -307,13 +323,12 @@ public partial class APIConfigViewModel : ObservableObject
                 }
                 catch
                 {
-                    // Key may not exist — that's fine
+                    IsKeySaved = true;
+                    throw;
                 }
             }
 
             // ── 2. Save key to Credential Manager ──
-            IsKeySaved = !string.IsNullOrEmpty(ApiKey);
-
             // ── 3. Write non-secret env vars to settings.json and secrets to settings.local.json ──
             var settingsPath = _configFileService.SettingsPath;
             var dir = Path.GetDirectoryName(settingsPath);

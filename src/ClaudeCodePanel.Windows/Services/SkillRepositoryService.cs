@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -392,22 +394,28 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
 
         Config.EnsureDirectoryExists(Path.GetDirectoryName(targetDir)!);
 
-        // Remove existing installation if present
-        DeleteDirectoryIfExists(targetDir);
-
-        CopyDirectoryRecursive(sourcePath, targetDir);
+        ReplaceDirectoryAtomically(
+            targetDir,
+            stagingDir =>
+            {
+                CopyDirectoryRecursive(sourcePath, stagingDir);
+                WriteInstallReceipt(stagingDir, SkillSource.LocalPath, sourcePath);
+            });
     }
 
     private static void InstallFromGitURL(string id, string url, string targetDir)
     {
         Config.EnsureDirectoryExists(Path.GetDirectoryName(targetDir)!);
 
-        // Remove existing installation if present
-        DeleteDirectoryIfExists(targetDir);
-
         try
         {
-            InstallFromGitURLAsync(url, targetDir).GetAwaiter().GetResult();
+            ReplaceDirectoryAtomically(
+                targetDir,
+                stagingDir =>
+                {
+                    InstallFromGitURLAsync(url, stagingDir).GetAwaiter().GetResult();
+                    WriteInstallReceipt(stagingDir, SkillSource.GitURL, url);
+                });
         }
         catch (SkillRepoException)
         {
@@ -559,9 +567,13 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
                     $"Skill '{id}' not found in the official Claude Code repository");
             }
 
-            DeleteDirectoryIfExists(targetDir);
-
-            CopyDirectoryRecursive(skillSourceDir, targetDir);
+            ReplaceDirectoryAtomically(
+                targetDir,
+                stagingDir =>
+                {
+                    CopyDirectoryRecursive(skillSourceDir, stagingDir);
+                    WriteInstallReceipt(stagingDir, SkillSource.Marketplace, officialRepo);
+                });
         }
         finally
         {
@@ -689,6 +701,183 @@ public sealed class SkillRepositoryService : ISkillRepositoryService
         {
             Debug.WriteLine($"[SkillRepositoryService] SaveCache failed: {ex.Message}");
         }
+    }
+
+    internal static void ReplaceDirectoryAtomically(string targetDir, Action<string> populateStaging)
+    {
+        ArgumentNullException.ThrowIfNull(populateStaging);
+
+        var fullTargetPath = Path.GetFullPath(targetDir);
+        var parentDirectory = Path.GetDirectoryName(fullTargetPath)
+            ?? throw new SkillRepoException($"Skill target has no parent directory: {targetDir}");
+        var targetName = Path.GetFileName(fullTargetPath);
+        var operationId = Guid.NewGuid().ToString("N");
+        var stagingDirectory = Path.Combine(parentDirectory, $".{targetName}.install-{operationId}");
+        var backupDirectory = Path.Combine(parentDirectory, $".{targetName}.backup-{operationId}");
+        var existingMovedToBackup = false;
+
+        Directory.CreateDirectory(parentDirectory);
+
+        try
+        {
+            populateStaging(stagingDirectory);
+
+            if (!Directory.Exists(stagingDirectory) ||
+                !File.Exists(Path.Combine(stagingDirectory, "SKILL.md")))
+            {
+                throw new SkillRepoException("The staged skill does not contain SKILL.md.");
+            }
+
+            if (Directory.Exists(fullTargetPath))
+            {
+                Directory.Move(fullTargetPath, backupDirectory);
+                existingMovedToBackup = true;
+            }
+
+            try
+            {
+                Directory.Move(stagingDirectory, fullTargetPath);
+            }
+            catch (Exception installException)
+            {
+                if (existingMovedToBackup && !Directory.Exists(fullTargetPath))
+                {
+                    try
+                    {
+                        Directory.Move(backupDirectory, fullTargetPath);
+                        existingMovedToBackup = false;
+                    }
+                    catch (Exception restoreException)
+                    {
+                        throw new SkillRepoException(
+                            $"Skill replacement failed and the previous installation could not be restored. " +
+                            $"Recovery copy remains at: {backupDirectory}",
+                            new AggregateException(installException, restoreException));
+                    }
+                }
+
+                throw;
+            }
+
+            if (existingMovedToBackup)
+            {
+                TryDeleteDirectory(backupDirectory, "ReplaceDirectoryAtomically.BackupCleanup");
+                existingMovedToBackup = false;
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(stagingDirectory, "ReplaceDirectoryAtomically.StagingCleanup");
+
+            // Only remove a backup if a target exists. If restoration failed, keep the backup
+            // intact and expose its location through the exception above.
+            if (existingMovedToBackup && Directory.Exists(fullTargetPath))
+                TryDeleteDirectory(backupDirectory, "ReplaceDirectoryAtomically.BackupCleanup");
+        }
+    }
+
+    private static void TryDeleteDirectory(string path, string operation)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch (Exception ex)
+        {
+            SharedHelpers.SafeLog($"SkillRepositoryService.{operation}", ex, path);
+        }
+    }
+
+    internal static void WriteInstallReceipt(
+        string skillDirectory,
+        SkillSource source,
+        string sourceLocation)
+    {
+        var receiptPath = Path.Combine(skillDirectory, ".claude-panel-install.json");
+        var tempPath = receiptPath + ".tmp";
+        var receipt = new Dictionary<string, object>
+        {
+            ["schemaVersion"] = 1,
+            ["source"] = source.ToString(),
+            ["sourceLocation"] = SanitizeSourceLocation(source, sourceLocation),
+            ["installedAtUtc"] = DateTime.UtcNow,
+            ["contentSha256"] = ComputeDirectoryFingerprint(skillDirectory)
+        };
+
+        try
+        {
+            var json = JsonSerializer.Serialize(receipt, CacheJsonOptions);
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, receiptPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+    }
+
+    private static string SanitizeSourceLocation(SkillSource source, string sourceLocation)
+    {
+        if (source == SkillSource.LocalPath)
+            return Path.GetFullPath(sourceLocation);
+
+        if (Uri.TryCreate(sourceLocation, UriKind.Absolute, out var uri) &&
+            uri.Scheme is "http" or "https")
+        {
+            var builder = new UriBuilder(uri)
+            {
+                UserName = "",
+                Password = "",
+                Query = "",
+                Fragment = ""
+            };
+            return builder.Uri.GetComponents(
+                UriComponents.SchemeAndServer | UriComponents.Path,
+                UriFormat.UriEscaped);
+        }
+
+        return sourceLocation;
+    }
+
+    private static string ComputeDirectoryFingerprint(string skillDirectory)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var receiptFileName = ".claude-panel-install.json";
+        var files = Directory
+            .EnumerateFiles(skillDirectory, "*", SearchOption.AllDirectories)
+            .Select(path => new
+            {
+                FullPath = path,
+                RelativePath = Path.GetRelativePath(skillDirectory, path)
+                    .Replace(Path.DirectorySeparatorChar, '/')
+            })
+            .Where(file =>
+                !file.RelativePath.Equals(receiptFileName, StringComparison.OrdinalIgnoreCase) &&
+                !file.RelativePath.StartsWith(".git/", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
+            .ToList();
+
+        var separator = new byte[] { 0 };
+        var buffer = new byte[81920];
+        foreach (var file in files)
+        {
+            hash.AppendData(Encoding.UTF8.GetBytes(file.RelativePath));
+            hash.AppendData(separator);
+
+            if ((File.GetAttributes(file.FullPath) & FileAttributes.ReparsePoint) == 0)
+            {
+                using var stream = File.OpenRead(file.FullPath);
+                int bytesRead;
+                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                    hash.AppendData(buffer, 0, bytesRead);
+            }
+
+            hash.AppendData(separator);
+        }
+
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
     internal static string NormalizeSkillId(string rawValue)

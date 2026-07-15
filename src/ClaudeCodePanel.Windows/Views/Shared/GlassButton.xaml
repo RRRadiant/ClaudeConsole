@@ -20,6 +20,7 @@
 
     <Border x:Name="RootBorder"
             CornerRadius="{DynamicResource RadiusPill}"
+            FocusVisualStyle="{StaticResource KeyboardFocusVisualStyle}"
             ClipToBounds="True"
             Cursor="Hand"
             RenderTransformOrigin="0.5,0.5"
@@ -38,7 +39,7 @@
             <Border CornerRadius="{DynamicResource RadiusPill}" BorderThickness="0" ClipToBounds="True">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#0FFFFFFF" Offset="0"/>
+                        <GradientStop Color="#24FFFFFF" Offset="0"/>
                         <GradientStop Color="#00FFFFFF" Offset="0.14"/>
                     </LinearGradientBrush>
                 </Border.Background>

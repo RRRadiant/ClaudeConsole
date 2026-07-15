@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <!-- ═══ Row 0 — Header ═══ -->
-        <Grid Grid.Row="0" Margin="48,36,48,20">
+        <Grid Grid.Row="0" Margin="32,28,32,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -41,7 +41,7 @@
         </Grid>
 
         <!-- ═══ Row 1 — Tab bar + Search ═══ -->
-        <Grid Grid.Row="1" Margin="48,0,48,24">
+        <Grid Grid.Row="1" Margin="32,0,32,24">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -117,7 +117,7 @@
 
         <!-- ═══ Row 2 — Content area ═══ -->
         <ScrollViewer Grid.Row="2" Margin="0,0,0,40">
-            <StackPanel Margin="48,0" HorizontalAlignment="Stretch">
+            <StackPanel Margin="32,0" HorizontalAlignment="Stretch">
 
                 <ItemsControl x:Name="InstalledList" Margin="0,0,0,32">
                     <ItemsControl.ItemsPanel>

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
@@ -16,17 +16,59 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <WebUiProjectDir>$(MSBuildProjectDirectory)\..\ClaudeCodePanel.WebUI</WebUiProjectDir>
+    <WebUiDistDir>$(WebUiProjectDir)\dist</WebUiDistDir>
     <!-- TODO: Set TreatWarningsAsErrors=true after all CA violations are resolved -->
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="ClaudeCodePanel.Windows.Tests" />
   </ItemGroup>
+
+  <ItemGroup>
+    <WebUiBuildInput Include="$(WebUiProjectDir)\package.json" />
+    <WebUiBuildInput Include="$(WebUiProjectDir)\package-lock.json" />
+    <WebUiBuildInput Include="$(WebUiProjectDir)\vite.config.ts" />
+    <WebUiBuildInput Include="$(WebUiProjectDir)\src\**\*" />
+  </ItemGroup>
+
+  <Target Name="EnsureWebUiDependencies"
+          BeforeTargets="BuildWebUi"
+          Condition="!Exists('$(WebUiProjectDir)\node_modules')">
+    <Exec WorkingDirectory="$(WebUiProjectDir)" Command="npm ci" />
+  </Target>
+
+  <Target Name="BuildWebUi"
+          BeforeTargets="BeforeBuild"
+          Inputs="@(WebUiBuildInput)"
+          Outputs="$(WebUiDistDir)\index.html">
+    <Exec WorkingDirectory="$(WebUiProjectDir)" Command="npm run build" />
+  </Target>
+
+  <Target Name="IncludeWebUiAssets"
+          BeforeTargets="AssignTargetPaths"
+          DependsOnTargets="BuildWebUi">
+    <ItemGroup>
+      <WebUiAsset Include="$(WebUiDistDir)\**\*" />
+      <Content Include="@(WebUiAsset)">
+        <Link>WebUI\%(WebUiAsset.RecursiveDir)%(WebUiAsset.Filename)%(WebUiAsset.Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </Content>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="VerifyPublishedWebUiAssets" AfterTargets="Publish">
+    <Error Condition="!Exists('$(PublishDir)WebUI\index.html')"
+           Text="The Web UI assets were not copied to the publish directory." />
+  </Target>
 
 </Project>

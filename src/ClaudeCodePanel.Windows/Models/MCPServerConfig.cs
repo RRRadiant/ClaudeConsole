@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -10,6 +12,7 @@ public partial class MCPServerConfig : ObservableObject
 {
     public Guid Id { get; } = Guid.NewGuid();
     public string PersistentKey => BuildPersistentKey(Name, ServerType, Command, Url, Args, Env, ProjectPath);
+    public Dictionary<string, JsonElement> AdditionalProperties { get; } = new(StringComparer.Ordinal);
 
     [ObservableProperty]
     private string _name = "";
@@ -56,7 +59,7 @@ public partial class MCPServerConfig : ObservableObject
         {
             if (!dict.TryGetValue("url", out var urlElement))
                 return null;
-            return new MCPServerConfig
+            var sseConfig = new MCPServerConfig
             {
                 Name = name,
                 ServerType = MCPServerType.Sse,
@@ -64,6 +67,8 @@ public partial class MCPServerConfig : ObservableObject
                 Url = urlElement.GetString() ?? "",
                 Enabled = enabled
             };
+            CopyAdditionalProperties(dict, sseConfig);
+            return sseConfig;
         }
 
         if (!dict.TryGetValue("command", out var cmdElement))
@@ -94,31 +99,49 @@ public partial class MCPServerConfig : ObservableObject
             }
         }
 
+        CopyAdditionalProperties(dict, config);
         return config;
     }
 
     public Dictionary<string, object> ToDictionary()
     {
+        var result = AdditionalProperties.ToDictionary(
+            static pair => pair.Key,
+            static pair => (object)pair.Value.Clone(),
+            StringComparer.Ordinal);
+
         if (ServerType == MCPServerType.Sse)
         {
-            return new Dictionary<string, object>
-            {
-                ["name"] = Name,
-                ["type"] = "sse",
-                ["url"] = Url,
-                ["enabled"] = Enabled
-            };
+            result["name"] = Name;
+            result["type"] = "sse";
+            result["url"] = Url;
+            result["enabled"] = Enabled;
+            return result;
         }
 
-        return new Dictionary<string, object>
+        result["name"] = Name;
+        result["type"] = "stdio";
+        result["command"] = Command;
+        result["args"] = Args;
+        result["env"] = Env;
+        result["enabled"] = Enabled;
+        return result;
+    }
+
+    private static void CopyAdditionalProperties(
+        IReadOnlyDictionary<string, JsonElement> source,
+        MCPServerConfig destination)
+    {
+        var knownProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["name"] = Name,
-            ["type"] = "stdio",
-            ["command"] = Command,
-            ["args"] = Args,
-            ["env"] = Env,
-            ["enabled"] = Enabled
+            "name", "type", "command", "url", "args", "env", "enabled"
         };
+
+        foreach (var pair in source)
+        {
+            if (!knownProperties.Contains(pair.Key))
+                destination.AdditionalProperties[pair.Key] = pair.Value.Clone();
+        }
     }
 
     public override bool Equals(object? obj) =>
@@ -137,23 +160,65 @@ public partial class MCPServerConfig : ObservableObject
     {
         static string Normalize(string? value) => (value ?? "").Trim();
 
-        var normalizedArgs = string.Join("\u001f", (args ?? Array.Empty<string>()).Select(Normalize));
-        var normalizedEnv = string.Join(
-            "\u001f",
-            (env ?? new Dictionary<string, string>())
-                .OrderBy(static kvp => kvp.Key, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(static kvp => kvp.Value, StringComparer.Ordinal)
-                .Select(static kvp => $"{kvp.Key.Trim()}={kvp.Value.Trim()}"));
-
-        return string.Join(
+        // A server name is unique within its configuration scope. Connection details are
+        // deliberately excluded because arguments, URLs, and environment values may contain
+        // credentials and should never be persisted as part of a display-name lookup key.
+        var identity = string.Join(
             "\u001e",
             Normalize(projectPath),
             serverType.ToString(),
-            Normalize(name),
-            Normalize(command),
-            Normalize(url),
-            normalizedArgs,
-            normalizedEnv);
+            Normalize(name));
+
+        return $"v2:{Hash(identity)}";
+    }
+
+    internal static string NormalizePersistentKey(string persistedKey)
+    {
+        if (IsHashedKey(persistedKey, "v2:") || IsHashedKey(persistedKey, "legacy:"))
+            return persistedKey;
+
+        // Legacy keys used seven record-separator-delimited fields. Only the first three
+        // (scope, type, and name) are needed to derive the new non-sensitive identity.
+        var fields = persistedKey.Split('\u001e');
+        if (fields.Length >= 3 &&
+            Enum.TryParse<MCPServerType>(fields[1], ignoreCase: true, out var serverType))
+        {
+            return BuildPersistentKey(
+                fields[2],
+                serverType,
+                command: null,
+                url: null,
+                args: null,
+                env: null,
+                fields[0]);
+        }
+
+        // Unknown historical formats cannot be mapped back to a server reliably. Hashing them
+        // preserves the alias entry without carrying potentially sensitive plaintext forward.
+        return $"legacy:{Hash(persistedKey)}";
+    }
+
+    private static bool IsHashedKey(string value, string prefix)
+    {
+        if (value.Length != prefix.Length + 64 ||
+            !value.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = prefix.Length; index < value.Length; index++)
+        {
+            if (!char.IsAsciiHexDigit(value[index]))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static string Hash(string value)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }
 
